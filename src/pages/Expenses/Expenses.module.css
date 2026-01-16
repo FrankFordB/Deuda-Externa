@@ -1,0 +1,424 @@
+.expenses {
+  animation: fadeIn var(--transition-normal) forwards;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-lg);
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+
+.headerLeft {
+  flex: 1;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--gray-800);
+  margin: 0;
+}
+
+.subtitle {
+  color: var(--gray-500);
+  margin: var(--spacing-xs) 0 0 0;
+}
+
+.subtitle strong {
+  color: var(--gray-800);
+}
+
+/* Filters */
+.filters {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  flex-wrap: wrap;
+}
+
+.dateFilters,
+.typeFilters {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+@media (max-width: 768px) {
+  .filters {
+    flex-direction: column;
+  }
+  
+  .dateFilters,
+  .typeFilters {
+    width: 100%;
+  }
+}
+
+/* Expenses List */
+.expensesList {
+  display: flex;
+  flex-direction: column;
+}
+
+.expenseItem {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--gray-100);
+  transition: background var(--transition-fast);
+}
+
+.expenseItem:last-child {
+  border-bottom: none;
+}
+
+.expenseItem:hover {
+  background: var(--gray-50);
+}
+
+.expenseIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: var(--gray-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+.expenseInfo {
+  min-width: 0;
+}
+
+.expenseDesc {
+  font-weight: 500;
+  color: var(--gray-800);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.expenseMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  margin-top: var(--spacing-xs);
+  flex-wrap: wrap;
+}
+
+.installmentBadge {
+  background: var(--primary-100);
+  color: var(--primary-700);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-weight: 500;
+}
+
+.expenseRight {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.expenseAmount {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  white-space: nowrap;
+}
+
+.expenseActions {
+  display: flex;
+  gap: var(--spacing-xs);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.expenseItem:hover .expenseActions {
+  opacity: 1;
+}
+
+.actionBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  transition: all var(--transition-fast);
+  background: var(--gray-100);
+  color: var(--gray-600);
+}
+
+.actionBtn:hover {
+  background: var(--success-500);
+  color: white;
+}
+
+.deleteBtn:hover {
+  background: var(--error-500);
+}
+
+.expenseStatus {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.expenseStatus.paid {
+  background: var(--success-50);
+  color: var(--success-600);
+}
+
+.expenseStatus.pending {
+  background: var(--warning-50);
+  color: var(--warning-600);
+}
+
+@media (max-width: 768px) {
+  .expenseItem {
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+  }
+  
+  .expenseRight {
+    grid-column: 2;
+    justify-content: flex-end;
+  }
+  
+  .expenseStatus {
+    grid-column: 1 / -1;
+    justify-self: start;
+    margin-top: var(--spacing-xs);
+  }
+  
+  .expenseActions {
+    opacity: 1;
+  }
+}
+
+/* Form */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--gray-700);
+  margin-bottom: var(--spacing-xs);
+  display: block;
+}
+
+.installmentsSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.installmentOptions {
+  display: flex;
+  gap: var(--spacing-xs);
+  flex-wrap: wrap;
+}
+
+.installmentBtn {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: var(--gray-100);
+  color: var(--gray-600);
+  transition: all var(--transition-fast);
+}
+
+.installmentBtn:hover {
+  background: var(--gray-200);
+}
+
+.installmentBtn.active {
+  background: var(--primary-500);
+  color: white;
+}
+
+.installmentPreview {
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--primary-50);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  color: var(--primary-700);
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--gray-700);
+}
+
+.checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary-500);
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--gray-100);
+  margin-top: var(--spacing-sm);
+}
+
+/* Friend Selector */
+.friendSelector {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.friendSelector .label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--gray-700);
+}
+
+.selectWithButton {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.friendSelector .select {
+  flex: 1;
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 0.875rem;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-md);
+  background: white;
+  color: var(--gray-800);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.friendSelector .select:focus {
+  outline: none;
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px var(--primary-100);
+}
+
+.addFriendBtn {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  background: var(--primary-500);
+  color: white;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.addFriendBtn:hover {
+  background: var(--primary-600);
+  transform: scale(1.05);
+}
+
+.noFriendsHint {
+  font-size: 0.8rem;
+  color: var(--gray-500);
+  margin: 0;
+}
+
+.linkBtn {
+  color: var(--primary-600);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: inherit;
+}
+
+/* Friend Form Modal */
+.friendForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.formHint {
+  font-size: 0.85rem;
+  color: var(--gray-500);
+  margin: 0;
+  padding: var(--spacing-sm);
+  background: var(--gray-50);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--primary-400);
+}
+
+.friendTypeButtons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.friendTypeBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-lg);
+  background: var(--gray-50);
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.friendTypeBtn:hover {
+  border-color: var(--primary-400);
+  background: var(--primary-50);
+}
+
+.friendTypeIcon {
+  font-size: 2rem;
+}
+
+.friendTypeLabel {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+.friendTypeDesc {
+  font-size: 0.8rem;
+  color: var(--gray-500);
+  text-align: center;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

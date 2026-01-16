@@ -1,0 +1,649 @@
+.debts {
+  animation: fadeIn var(--transition-normal) forwards;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-lg);
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+
+.headerLeft {
+  flex: 1;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--gray-800);
+  margin: 0;
+}
+
+.subtitle {
+  color: var(--gray-500);
+  margin: var(--spacing-xs) 0 0 0;
+}
+
+/* Summary */
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+}
+
+@media (max-width: 768px) {
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.summaryItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.summaryIcon {
+  font-size: 2rem;
+}
+
+.summaryValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.summaryLabel {
+  font-size: 0.875rem;
+  opacity: 0.9;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-lg);
+  border-bottom: 1px solid var(--gray-200);
+  overflow-x: auto;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--gray-500);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--gray-700);
+}
+
+.tab.active {
+  color: var(--primary-600);
+  border-bottom-color: var(--primary-600);
+}
+
+.tabBadge {
+  background: var(--error-500);
+  color: white;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+/* Debts List */
+.debtsList {
+  display: flex;
+  flex-direction: column;
+}
+
+.debtItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid var(--gray-100);
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.debtItem:last-child {
+  border-bottom: none;
+}
+
+.debtInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex: 1;
+  min-width: 0;
+}
+
+.debtAvatar {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background: var(--gradient-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.debtName {
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+.debtNickname {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+}
+
+.debtDesc {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+  margin-top: var(--spacing-xs);
+}
+
+.debtRight {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.debtAmount {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--gray-800);
+}
+
+.debtActions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.statusBadge {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.statusBadge.pending {
+  background: var(--warning-50);
+  color: var(--warning-600);
+}
+
+.statusBadge.accepted {
+  background: var(--success-50);
+  color: var(--success-600);
+}
+
+.statusBadge.rejected {
+  background: var(--error-50);
+  color: var(--error-600);
+}
+
+.statusBadge.paid {
+  background: var(--primary-100);
+  color: var(--primary-700);
+}
+
+@media (max-width: 640px) {
+  .debtItem {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .debtRight {
+    width: 100%;
+    justify-content: space-between;
+    margin-top: var(--spacing-md);
+  }
+}
+
+/* Form */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--gray-100);
+  margin-top: var(--spacing-sm);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Friend Selector */
+.friendSelector {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.friendSelector .label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--gray-700);
+}
+
+.friendSelector .select {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 0.875rem;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-md);
+  background: white;
+  color: var(--gray-800);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.friendSelector .select:focus {
+  outline: none;
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px var(--primary-100);
+}
+
+.friendSelector .select optgroup {
+  font-weight: 600;
+  color: var(--gray-600);
+}
+
+/* Select con botón de agregar */
+.selectWithButton {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.selectWithButton .select {
+  flex: 1;
+}
+
+.addFriendBtn {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  background: var(--primary-500);
+  color: white;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.addFriendBtn:hover {
+  background: var(--primary-600);
+  transform: scale(1.05);
+}
+
+.noFriendsHint {
+  font-size: 0.8rem;
+  color: var(--gray-500);
+  margin: 0;
+}
+
+.linkBtn {
+  color: var(--primary-600);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: inherit;
+}
+
+.linkBtn:hover {
+  color: var(--primary-700);
+}
+
+.addContactBtn {
+  align-self: flex-start;
+  font-size: 0.8rem;
+  color: var(--primary-600);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.addContactBtn:hover {
+  background: var(--primary-50);
+  color: var(--primary-700);
+}
+
+/* Virtual Friend Form */
+.virtualFriendForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.formHint {
+  font-size: 0.85rem;
+  color: var(--gray-500);
+  margin: 0;
+  padding: var(--spacing-sm);
+  background: var(--gray-50);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--primary-400);
+}
+
+/* Friend Type Selection Buttons */
+.friendTypeButtons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.friendTypeBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-lg);
+  background: var(--gray-50);
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.friendTypeBtn:hover {
+  border-color: var(--primary-400);
+  background: var(--primary-50);
+}
+
+.friendTypeIcon {
+  font-size: 2rem;
+}
+
+.friendTypeLabel {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+.friendTypeDesc {
+  font-size: 0.8rem;
+  color: var(--gray-500);
+  text-align: center;
+}
+
+/* Installments Section */
+.installmentsSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.installmentsSection .label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--gray-700);
+}
+
+.installmentsInput {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  background: var(--gray-50);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm);
+  width: fit-content;
+}
+
+.installmentBtn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 600;
+  background: white;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  color: var(--gray-700);
+}
+
+.installmentBtn:hover:not(:disabled) {
+  background: var(--primary-50);
+  border-color: var(--primary-400);
+  color: var(--primary-600);
+}
+
+.installmentBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.installmentValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary-600);
+  min-width: 40px;
+  text-align: center;
+}
+
+.installmentHint {
+  font-size: 0.8rem;
+  color: var(--success-600);
+  background: var(--success-50);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  margin: 0;
+}
+
+/* Dates Section */
+.datesSection {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+}
+
+@media (max-width: 500px) {
+  .datesSection {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Debt Detail - Installments List */
+.installmentsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: var(--gray-50);
+  border-radius: var(--radius-md);
+}
+
+.installmentsTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--gray-700);
+  margin: 0 0 var(--spacing-sm) 0;
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.installmentItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm);
+  background: white;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--gray-200);
+}
+
+.installmentItem.paid {
+  background: var(--success-50);
+  border-color: var(--success-200);
+}
+
+.installmentItem.overdue {
+  background: var(--error-50);
+  border-color: var(--error-200);
+}
+
+.installmentInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.installmentNumber {
+  font-weight: 600;
+  color: var(--gray-800);
+  font-size: 0.875rem;
+}
+
+.installmentDueDate {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+}
+
+.installmentAmount {
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+.installmentStatus {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.installmentStatus.paid {
+  background: var(--success-100);
+  color: var(--success-700);
+}
+
+.installmentStatus.pending {
+  background: var(--warning-100);
+  color: var(--warning-700);
+}
+
+.installmentStatus.overdue {
+  background: var(--error-100);
+  color: var(--error-700);
+}
+
+/* Debt Item Badges */
+.installmentsBadge {
+  font-size: 0.75rem;
+  color: var(--primary-600);
+  background: var(--primary-50);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  display: inline-block;
+  margin-top: var(--spacing-xs);
+}
+
+.dueDateBadge {
+  font-size: 0.75rem;
+  color: var(--gray-600);
+  margin-top: 4px;
+}
+
+.dueDateBadge.overdue {
+  color: var(--error-600);
+  font-weight: 600;
+}
+
+/* Debt Detail Modal */
+.debtDetail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.debtDetailHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.debtDetailHeader h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--gray-800);
+}
+
+.debtDetailAmount {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary-600);
+}
+
+.debtDetailInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.detailRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm);
+  background: var(--gray-50);
+  border-radius: var(--radius-sm);
+}
+
+.detailLabel {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+}
+
+.detailValue {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--gray-800);
+}
+
+.detailValue.overdue {
+  color: var(--error-600);
+}
+
+.noInstallments {
+  font-size: 0.875rem;
+  color: var(--gray-500);
+  text-align: center;
+  padding: var(--spacing-md);
+}

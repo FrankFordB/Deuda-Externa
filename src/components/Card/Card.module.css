@@ -1,0 +1,84 @@
+.card {
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.header {
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 0.875rem;
+  color: var(--gray-500);
+  margin: var(--spacing-xs) 0 0 0;
+}
+
+.body {
+  padding: var(--spacing-lg);
+}
+
+.footer {
+  padding: var(--spacing-lg);
+  border-top: 1px solid var(--gray-100);
+  background: var(--gray-50);
+}
+
+/* Variants */
+.gradient {
+  background: var(--gradient-card);
+  color: white;
+}
+
+.gradient .title,
+.gradient .subtitle {
+  color: white;
+}
+
+.gradient .subtitle {
+  opacity: 0.9;
+}
+
+.success {
+  background: var(--gradient-success);
+  color: white;
+}
+
+.success .title,
+.success .subtitle {
+  color: white;
+}
+
+.warning {
+  background: var(--gradient-warning);
+  color: white;
+}
+
+.warning .title,
+.warning .subtitle {
+  color: white;
+}
+
+.dark {
+  background: var(--gradient-dark);
+  color: white;
+}
+
+.dark .title,
+.dark .subtitle {
+  color: white;
+}
+
+.bordered {
+  border: 1px solid var(--gray-200);
+  box-shadow: none;
+}

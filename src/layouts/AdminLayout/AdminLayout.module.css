@@ -1,0 +1,90 @@
+.adminLayout {
+  background: var(--gray-900);
+  min-height: 100vh;
+}
+
+.adminLayout .sidebar {
+  background: var(--gray-800);
+  border-right-color: var(--gray-700);
+}
+
+.adminLayout .logo {
+  background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.adminLayout .navSectionTitle {
+  color: var(--gray-500);
+}
+
+.adminLayout .navLink {
+  color: var(--gray-400);
+}
+
+.adminLayout .navLink:hover {
+  background: var(--gray-700);
+  color: white;
+}
+
+.adminLayout .navLink.active {
+  background: var(--warning-500);
+  color: var(--gray-900);
+}
+
+.adminLayout .navLink.active::before {
+  background: var(--warning-500);
+}
+
+.adminLayout .sidebarFooter {
+  border-top-color: var(--gray-700);
+}
+
+.adminLayout .header {
+  background: var(--gray-800);
+  border-bottom-color: var(--gray-700);
+}
+
+.adminLayout .pageTitle {
+  color: white;
+}
+
+.adminLayout .headerBtn {
+  color: var(--gray-400);
+}
+
+.adminLayout .headerBtn:hover {
+  background: var(--gray-700);
+  color: white;
+}
+
+.adminLayout .userName {
+  color: white;
+}
+
+.adminLayout .userRole {
+  color: var(--warning-500);
+}
+
+.adminLayout .pageContent {
+  background: var(--gray-900);
+}
+
+.adminLayout .footer {
+  background: var(--gray-800);
+  border-top-color: var(--gray-700);
+  color: var(--gray-500);
+}
+
+.adminBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  background: var(--warning-500);
+  color: var(--gray-900);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+}

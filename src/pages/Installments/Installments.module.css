@@ -1,0 +1,227 @@
+/**
+ * Installments Page Styles
+ */
+
+.installments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Summary Grid */
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.summaryCard {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg) !important;
+}
+
+.summaryCard.danger {
+  border-color: var(--danger);
+  background: rgba(var(--danger-rgb), 0.05);
+}
+
+.summaryIcon {
+  font-size: 2rem;
+  padding: var(--spacing-sm);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.summaryContent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.summaryLabel {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.summaryValue {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.summarySubtext {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+/* Section Title */
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--spacing-md) 0;
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Installment List */
+.installmentList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.installmentItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--border-color);
+  transition: all var(--transition-fast);
+}
+
+.installmentItem:hover {
+  background: var(--bg-hover);
+}
+
+.installmentItem.overdue {
+  border-left-color: var(--danger);
+  background: rgba(var(--danger-rgb), 0.05);
+}
+
+.installmentItem.soon {
+  border-left-color: var(--warning);
+  background: rgba(var(--warning-rgb), 0.05);
+}
+
+.installmentItem.paid {
+  border-left-color: var(--success);
+  opacity: 0.7;
+}
+
+.installmentInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.installmentExpense {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.installmentMeta {
+  display: flex;
+  gap: var(--spacing-sm);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+.installmentDate {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.overdueBadge {
+  color: var(--danger);
+  font-weight: 500;
+}
+
+.soonBadge {
+  color: var(--warning);
+  font-weight: 500;
+}
+
+.paidBadge {
+  color: var(--success);
+  font-weight: 500;
+}
+
+.daysAway {
+  color: var(--text-secondary);
+}
+
+.installmentActions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.installmentAmount {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.payButton {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--success);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.payButton:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.showMore {
+  text-align: center;
+  padding: var(--spacing-md);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .installmentItem {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-md);
+  }
+
+  .installmentActions {
+    justify-content: space-between;
+  }
+
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,294 @@
+/**
+ * Estilos para NotificationsPanel
+ */
+
+.container {
+  position: relative;
+}
+
+.bellButton {
+  position: relative;
+  background: transparent;
+  border: none;
+  padding: 0.5rem;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.2s;
+}
+
+.bellButton:hover {
+  background: var(--gray-100);
+}
+
+.bellIcon {
+  font-size: 1.25rem;
+}
+
+.badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 18px;
+  height: 18px;
+  background: var(--danger);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: 360px;
+  max-height: 480px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  z-index: 1000;
+  animation: slideIn 0.2s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.markAllRead {
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.markAllRead:hover {
+  background: var(--primary-light);
+}
+
+.notificationsList {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.loading,
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  color: var(--gray-500);
+}
+
+.emptyIcon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.5;
+}
+
+.empty p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.notification {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--gray-100);
+  cursor: pointer;
+  transition: background 0.2s;
+  position: relative;
+}
+
+.notification:hover {
+  background: var(--gray-50);
+}
+
+.notification.unread {
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.notification.unread::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--primary);
+}
+
+.notificationIcon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.notificationContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.notificationContent h4 {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--gray-900);
+}
+
+.notificationContent p {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.85rem;
+  color: var(--gray-600);
+  line-height: 1.4;
+}
+
+.time {
+  font-size: 0.75rem;
+  color: var(--gray-400);
+}
+
+.actionButtons {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.actionBtn {
+  flex: 1;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.actionBtn.confirm {
+  background: var(--success);
+  color: white;
+}
+
+.actionBtn.confirm:hover:not(:disabled) {
+  background: #059669;
+}
+
+.actionBtn.reject {
+  background: var(--gray-200);
+  color: var(--gray-700);
+}
+
+.actionBtn.reject:hover:not(:disabled) {
+  background: var(--gray-300);
+}
+
+.actionBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.deleteBtn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border: none;
+  color: var(--gray-400);
+  font-size: 1rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s, color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.notification:hover .deleteBtn {
+  opacity: 1;
+}
+
+.deleteBtn:hover {
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Dark mode */
+:global(.dark) .bellButton:hover {
+  background: var(--gray-700);
+}
+
+:global(.dark) .panel {
+  background: var(--gray-800);
+  border: 1px solid var(--gray-700);
+}
+
+:global(.dark) .header {
+  border-color: var(--gray-700);
+}
+
+:global(.dark) .notification {
+  border-color: var(--gray-700);
+}
+
+:global(.dark) .notification:hover {
+  background: var(--gray-700);
+}
+
+:global(.dark) .notification.unread {
+  background: rgba(99, 102, 241, 0.1);
+}
+
+:global(.dark) .notificationContent h4 {
+  color: var(--gray-100);
+}
+
+:global(.dark) .notificationContent p {
+  color: var(--gray-400);
+}
+
+@media (max-width: 480px) {
+  .panel {
+    width: calc(100vw - 2rem);
+    right: -1rem;
+  }
+}
