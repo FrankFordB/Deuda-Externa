@@ -5,6 +5,7 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import friendsService from '../services/friendsService';
+import { supabase } from '../services/supabase';
 
 const FriendsContext = createContext(null);
 
@@ -21,6 +22,7 @@ export const FriendsProvider = ({ children }) => {
   const [friends, setFriends] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
   const [sentRequests, setSentRequests] = useState([]);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -44,6 +46,7 @@ export const FriendsProvider = ({ children }) => {
       setFriends(friendsResult.friends || []);
       setPendingRequests(pendingResult.requests || []);
       setSentRequests(sentResult.requests || []);
+      setPendingRequestsCount((pendingResult.requests || []).length);
       setError(null);
     } catch (err) {
       console.error('Error cargando amigos:', err);
@@ -55,6 +58,7 @@ export const FriendsProvider = ({ children }) => {
   };
 
   useEffect(() => {
+    // Cargar inmediatamente
     if (user?.id && user.id !== userIdRef.current) {
       userIdRef.current = user.id;
       loadFriends(user.id);
@@ -63,7 +67,45 @@ export const FriendsProvider = ({ children }) => {
       setFriends([]);
       setPendingRequests([]);
       setSentRequests([]);
+      setPendingRequestsCount(0);
     }
+  }, [user?.id]);
+
+  // Real-time subscription para friends
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel('friends-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'friends',
+          filter: `receiver_id=eq.${user.id}`
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT' && payload.new.status === 'pending') {
+            // Nueva solicitud de amistad recibida
+            setPendingRequests(prev => [payload.new, ...prev]);
+            setPendingRequestsCount(prev => prev + 1);
+          } else if (payload.eventType === 'UPDATE') {
+            // Solicitud actualizada (aceptada/rechazada)
+            loadingRef.current = false;
+            loadFriends(user.id);
+          } else if (payload.eventType === 'DELETE') {
+            // Solicitud eliminada
+            setPendingRequests(prev => prev.filter(req => req.id !== payload.old.id));
+            setPendingRequestsCount(prev => Math.max(0, prev - 1));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user?.id]);
 
   const searchUsers = async (nickname) => {
@@ -145,6 +187,7 @@ export const FriendsProvider = ({ children }) => {
     loading,
     error,
     pendingCount: pendingRequests.length,
+    pendingRequestsCount,
     searchUsers,
     sendRequest,
     acceptRequest,

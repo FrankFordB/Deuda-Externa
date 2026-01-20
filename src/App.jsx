@@ -8,6 +8,8 @@ import {
   Register,
   ForgotPassword,
   ResetPassword,
+  EmailVerified,
+  EmailVerificationSent,
   Dashboard,
   Expenses,
   Debts,
@@ -16,6 +18,7 @@ import {
   Installments,
   Profile,
   Settings,
+  AccountDetail,
   AdminDashboard,
   AdminUsers,
   AdminConfig
@@ -31,6 +34,8 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/email-verified" element={<EmailVerified />} />
+          <Route path="/email-verification-sent" element={<EmailVerificationSent />} />
         </Route>
 
         {/* Rutas principales (requieren autenticación) */}
@@ -44,6 +49,7 @@ function App() {
           <Route path="/installments" element={<Installments />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/account/:accountId" element={<AccountDetail />} />
         </Route>
 
         {/* Rutas de administración (requieren superadmin) */}

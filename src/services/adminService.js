@@ -17,6 +17,7 @@ export const checkIsSuperAdmin = async (userId) => {
     if (error) throw error;
     return { isSuperAdmin: data?.role === 'superadmin', error: null };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { isSuperAdmin: false, error: null };
     console.error('Error verificando rol:', error);
     return { isSuperAdmin: false, error };
   }
@@ -156,14 +157,35 @@ export const getSiteConfig = async () => {
       .from('site_config')
       .select('*');
 
-    if (error && error.code !== 'PGRST116') throw error;
+    // Ignorar errores comunes
+    if (error) {
+      // PGRST116 = No rows returned
+      // 42P01 = Table doesn't exist
+      if (error.code === 'PGRST116' || error.code === '42P01') {
+        // Retornar configuración por defecto sin error
+        return { 
+          config: {
+            header_title: 'GestorDeudas',
+            header_links: [],
+            footer_text: '© 2026 GestorDeudas. Todos los derechos reservados.',
+            footer_links: [],
+            theme: 'light',
+            currency: '$'
+          }, 
+          error: null 
+        };
+      }
+      throw error;
+    }
     
     // Convertir array de {key, value} a objeto
     const configObj = {
       header_title: 'GestorDeudas',
       header_links: [],
       footer_text: '© 2026 GestorDeudas. Todos los derechos reservados.',
-      footer_links: []
+      footer_links: [],
+      theme: 'light',
+      currency: '$'
     };
     
     if (data && Array.isArray(data)) {
@@ -179,12 +201,35 @@ export const getSiteConfig = async () => {
     
     return { config: configObj, error: null };
   } catch (error) {
-    // Ignorar AbortError
-    if (error.name === 'AbortError') {
-      return { config: null, error: null };
+    // Ignorar AbortError y errores de tabla inexistente
+    if (error.name === 'AbortError' || error.message?.includes('AbortError') || error.code === '42P01') {
+      return { 
+        config: {
+          header_title: 'GestorDeudas',
+          header_links: [],
+          footer_text: '© 2026 GestorDeudas. Todos los derechos reservados.',
+          footer_links: [],
+          theme: 'light',
+          currency: '$'
+        }, 
+        error: null 
+      };
     }
-    console.error('Error obteniendo configuración:', error);
-    return { config: null, error };
+    // Solo loguear errores reales, no AbortError
+    if (error.name !== 'AbortError' && !error.message?.includes('AbortError')) {
+      console.warn('Error obteniendo configuración (usando defaults):', error.message);
+    }
+    return { 
+      config: {
+        header_title: 'GestorDeudas',
+        header_links: [],
+        footer_text: '© 2026 GestorDeudas. Todos los derechos reservados.',
+        footer_links: [],
+        theme: 'light',
+        currency: '$'
+      }, 
+      error: null 
+    };
   }
 };
 

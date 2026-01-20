@@ -10,6 +10,7 @@ const Select = forwardRef(({
   options = [],
   placeholder = 'Seleccionar...',
   className = '',
+  children,
   ...props 
 }, ref) => {
   return (
@@ -23,12 +24,18 @@ const Select = forwardRef(({
           className={`${styles.select} ${error ? styles.error : ''}`}
           {...props}
         >
-          <option value="">{placeholder}</option>
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
+          {children ? (
+            children
+          ) : (
+            <>
+              <option value="" key="placeholder-option">{placeholder}</option>
+              {options.map((option, index) => (
+                <option key={option.value || `option-${index}`} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </>
+          )}
         </select>
         <span className={styles.arrow}>▼</span>
       </div>

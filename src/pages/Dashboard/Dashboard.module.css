@@ -11,6 +11,18 @@
   gap: var(--spacing-md);
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.dateSelector {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
 .welcomeTitle {
   font-size: 1.5rem;
   font-weight: 700;
@@ -426,6 +438,21 @@
   margin: 0;
 }
 
+.salaryFormHint2 {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  padding: var(--spacing-sm);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--primary-500);
+}
+
+.dateSelectors {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--spacing-sm);
+}
+
 .salaryFormActions {
   display: flex;
   justify-content: flex-end;
@@ -505,4 +532,50 @@
 .alertDate {
   font-size: 0.75rem;
   color: var(--gray-500);
+}
+
+/* Paneles de acceso rápido */
+.quickAccessPanels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+}
+
+.monthSelectorCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.cardTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+.cardIcon {
+  font-size: 1.5rem;
+}
+
+.cardDescription {
+  color: var(--gray-600);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .quickAccessPanels {
+    grid-template-columns: 1fr;
+  }
 }

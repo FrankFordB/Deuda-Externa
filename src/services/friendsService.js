@@ -17,6 +17,7 @@ export const searchUserByNickname = async (nickname) => {
     if (error) throw error;
     return { users: data, error: null };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { users: [], error: null };
     console.error('Error buscando usuario:', error);
     return { users: [], error };
   }
@@ -163,6 +164,7 @@ export const getFriends = async (userId) => {
 
     return { friends, error: null };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { friends: [], error: null };
     console.error('Error obteniendo amigos:', error);
     return { friends: [], error };
   }
@@ -201,6 +203,7 @@ export const getPendingRequests = async (userId) => {
 
     return { requests, error: null };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { requests: [], error: null };
     console.error('Error obteniendo solicitudes:', error);
     return { requests: [], error };
   }
@@ -239,6 +242,7 @@ export const getSentRequests = async (userId) => {
 
     return { requests, error: null };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { requests: [], error: null };
     console.error('Error obteniendo solicitudes enviadas:', error);
     return { requests: [], error };
   }

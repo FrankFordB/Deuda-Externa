@@ -13,12 +13,16 @@ export const checkAndGenerateReminders = async (userId) => {
     const { error } = await supabase.rpc('generate_payment_reminders');
     
     if (error) {
-      console.warn('Error generando recordatorios automáticos:', error);
+      // Ignorar AbortError
+      if (error.name !== 'AbortError' && !error.message?.includes('AbortError')) {
+        console.warn('Error generando recordatorios automáticos:', error);
+      }
       // No es crítico, continuar
     }
 
     return { success: true };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { success: false, error: null };
     console.error('Error en checkAndGenerateReminders:', error);
     return { success: false, error };
   }
@@ -45,6 +49,7 @@ export const getPendingReminders = async (userId) => {
     if (error) throw error;
     return { reminders: data || [], error: null };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { reminders: [], error: null };
     console.error('Error obteniendo recordatorios:', error);
     return { reminders: [], error };
   }
@@ -71,6 +76,7 @@ export const createReminder = async (userId, reminderData) => {
     if (error) throw error;
     return { reminder: data, error: null };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { reminder: null, error: null };
     console.error('Error creando recordatorio:', error);
     return { reminder: null, error };
   }
@@ -179,6 +185,7 @@ export const getUpcomingDueDates = async (userId) => {
       error: null
     };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { debtsIOwe: [], debtsOwedToMe: [], expenses: [], installments: [], error: null };
     console.error('Error obteniendo próximos vencimientos:', error);
     return { debtsIOwe: [], debtsOwedToMe: [], expenses: [], installments: [], error };
   }
@@ -202,6 +209,7 @@ export const sendReminderNotification = async (userId, data) => {
     if (error) throw error;
     return { success: true, error: null };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { success: false, error: null };
     console.error('Error enviando notificación:', error);
     return { success: false, error };
   }

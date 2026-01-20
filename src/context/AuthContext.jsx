@@ -24,43 +24,62 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [initialized, setInitialized] = useState(false);
 
-  // Función para cargar el perfil
-  const loadProfile = useCallback(async (userId) => {
+  // Función para cargar el perfil (función normal, no useCallback para evitar loop)
+  const loadProfile = async (userId) => {
     if (!userId) return null;
     
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, email, nickname, first_name, last_name, country, birth_date, role, avatar_url, is_superadmin')
         .eq('id', userId)
         .maybeSingle();
       
       if (error) {
+        // Ignorar AbortError
+        if (error.name === 'AbortError' || error.message?.includes('AbortError')) {
+          return null;
+        }
         console.warn('Error cargando perfil:', error.message);
         return null;
       }
       
       return data;
     } catch (e) {
+      if (e.name === 'AbortError' || e.message?.includes('AbortError')) return null;
       console.warn('Perfil no encontrado:', e.message);
       return null;
     }
-  }, []);
+  };
 
   // Inicializar autenticación
   useEffect(() => {
     let isMounted = true;
+    let timeoutId = null;
     
     const initAuth = async () => {
       try {
+        const startTime = performance.now();
         console.log('🔄 Inicializando autenticación...');
+        
+        // Timeout de seguridad: si tarda más de 10 segundos, forzar fin de loading
+        timeoutId = setTimeout(() => {
+          if (isMounted && loading) {
+            console.warn('⚠️ Timeout de autenticación - forzando fin de loading');
+            setLoading(false);
+            setInitialized(true);
+          }
+        }, 10000);
         
         // Obtener sesión actual
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        console.log(`⏱️ getSession tardó: ${(performance.now() - startTime).toFixed(2)}ms`);
         
         if (!isMounted) return;
         
         if (sessionError) {
+          // Ignorar AbortError
+          if (sessionError.name === 'AbortError') return;
           console.warn('Error obteniendo sesión:', sessionError.message);
           setLoading(false);
           setInitialized(true);
@@ -71,42 +90,62 @@ export const AuthProvider = ({ children }) => {
           console.log('✅ Sesión encontrada:', session.user.email);
           setUser(session.user);
           
-          // Cargar perfil
-          const profileData = await loadProfile(session.user.id);
-          if (isMounted && profileData) {
-            setProfile(profileData);
-            setIsSuperAdmin(profileData.role === 'superadmin');
+          // Cargar perfil con timeout
+          const profileStart = performance.now();
+          try {
+            const profileData = await Promise.race([
+              loadProfile(session.user.id),
+              new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Profile timeout')), 5000)
+              )
+            ]);
+            console.log(`⏱️ loadProfile tardó: ${(performance.now() - profileStart).toFixed(2)}ms`);
+            if (isMounted && profileData) {
+              setProfile(profileData);
+              setIsSuperAdmin(profileData.role === 'superadmin');
+              console.log('✅ Perfil cargado:', { nickname: profileData.nickname, role: profileData.role });
+            } else {
+              console.warn('⚠️ No se pudo cargar el perfil del usuario');
+            }
+          } catch (profileErr) {
+            console.warn('⚠️ Error o timeout cargando perfil:', profileErr.message);
+            // Continuar sin perfil - no bloquear la app
           }
         } else {
           console.log('ℹ️ No hay sesión activa');
         }
       } catch (err) {
+        // Ignorar AbortError
+        if (err.name === 'AbortError') return;
         console.error('Error inicializando auth:', err);
         if (isMounted) setError(err?.message || 'Error desconocido');
       } finally {
+        // Limpiar timeout ANTES de terminar
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        
         if (isMounted) {
           setLoading(false);
           setInitialized(true);
+          console.log('✅ Autenticación inicializada');
         }
       }
     };
 
     initAuth();
 
-    // Escuchar cambios de autenticación
+    // Escuchar cambios de autenticación (SIMPLIFICADO - sin cargas adicionales)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         if (!isMounted) return;
         
         console.log('🔔 Auth state change:', event);
         
+        // Solo actualizar estado, NO cargar perfil aquí
         if (event === 'SIGNED_IN' && session?.user) {
           setUser(session.user);
-          const profileData = await loadProfile(session.user.id);
-          if (isMounted && profileData) {
-            setProfile(profileData);
-            setIsSuperAdmin(profileData.role === 'superadmin');
-          }
           setLoading(false);
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
@@ -115,15 +154,25 @@ export const AuthProvider = ({ children }) => {
           setLoading(false);
         } else if (event === 'TOKEN_REFRESHED') {
           console.log('🔄 Token refrescado');
+          // Actualizar usuario si hay sesión
+          if (session?.user) {
+            setUser(session.user);
+          }
+        } else if (event === 'USER_UPDATED') {
+          console.log('👤 Usuario actualizado');
+          if (session?.user) {
+            setUser(session.user);
+          }
         }
       }
     );
 
     return () => {
       isMounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
       subscription?.unsubscribe();
     };
-  }, [loadProfile]);
+  }, []); // Sin dependencias - solo ejecutar una vez al montar
 
   const signIn = async (email, password) => {
     setError(null);
@@ -154,12 +203,17 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     try {
       const result = await authService.signUp(userData);
+      console.log('📦 Resultado de authService.signUp:', result);
+      
       if (result.error) {
         setError(result.error.message);
         return { success: false, error: result.error };
       }
+      
+      console.log('✅ Retornando success con nickname:', result.nickname);
       return { success: true, nickname: result.nickname };
     } catch (err) {
+      console.error('❌ Error en signUp:', err);
       setError(err.message);
       return { success: false, error: err };
     } finally {
@@ -276,7 +330,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Recargar perfil del usuario actual
-  const reloadProfile = useCallback(async () => {
+  const reloadProfile = async () => {
     if (!user) return;
     
     try {
@@ -288,7 +342,29 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       console.warn('Error recargando perfil:', err);
     }
-  }, [user, loadProfile]);
+  };
+
+  // Eliminar cuenta permanentemente
+  const deleteAccount = async () => {
+    if (!user) return { success: false, error: { message: 'No autenticado' } };
+    
+    try {
+      const result = await authService.deleteAccount(user.id);
+      if (result.error) {
+        return { success: false, error: result.error };
+      }
+      
+      // Limpiar estado local
+      setUser(null);
+      setProfile(null);
+      setIsSuperAdmin(false);
+      setLoading(false);
+      
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err };
+    }
+  };
 
   const value = {
     user,
@@ -306,6 +382,7 @@ export const AuthProvider = ({ children }) => {
     updatePasswordWithToken,
     changePassword,
     checkRecoverySession,
+    deleteAccount,
     clearError: () => setError(null)
   };
 

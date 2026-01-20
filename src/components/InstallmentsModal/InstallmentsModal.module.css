@@ -1,0 +1,252 @@
+/**
+ * Installments Modal Styles
+ */
+
+.modalContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+/* Expense Info */
+.expenseInfo {
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: var(--spacing-md);
+}
+
+.expenseHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+  margin-bottom: var(--spacing-sm);
+}
+
+.expenseName {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.friendBadge {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-full);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.friendAvatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.expenseCategory {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+/* Financial Summary */
+.financialSummary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.summaryItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.summaryLabel {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.summaryValue {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.summaryItem.success .summaryValue {
+  color: var(--success);
+}
+
+.summaryItem.warning .summaryValue {
+  color: var(--warning);
+}
+
+/* Installments List */
+.installmentsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.sectionTitle {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--spacing-sm) 0;
+}
+
+.installmentCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.installmentCard.paid {
+  background: rgba(34, 197, 94, 0.05);
+  border-color: var(--success-300);
+}
+
+.installmentCard.overdue {
+  background: rgba(239, 68, 68, 0.05);
+  border-color: var(--error-300);
+}
+
+.installmentLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.installmentNumber {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.installmentDate {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.paidDate {
+  font-size: 0.8rem;
+  color: var(--success);
+  font-style: italic;
+}
+
+.installmentRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--spacing-xs);
+}
+
+.installmentAmount {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.installmentStatus {
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.installmentStatus.statusPaid {
+  background: var(--success-100);
+  color: var(--success-700);
+}
+
+.installmentStatus.statusPending {
+  background: var(--warning-100);
+  color: var(--warning-700);
+}
+
+.installmentStatus.statusOverdue {
+  background: var(--error-100);
+  color: var(--error-700);
+}
+
+/* Progress Section */
+.progressSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-color);
+}
+
+.progressLabel {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.progressBar {
+  height: 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-500), var(--primary-600));
+  border-radius: var(--radius-full);
+  transition: width var(--transition-normal);
+}
+
+.progressPercentage {
+  text-align: right;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--primary-600);
+}
+
+/* Modal Actions */
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-color);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .expenseHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .financialSummary {
+    grid-template-columns: 1fr;
+  }
+
+  .installmentCard {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+
+  .installmentRight {
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}

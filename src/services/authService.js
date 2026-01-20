@@ -51,12 +51,15 @@ export const signUp = async ({
     // Generar nickname único
     const nickname = await generateUniqueNickname(firstName);
 
+    console.log('📝 Registrando usuario con nickname:', nickname);
+
     // Registrar usuario en Supabase Auth con metadata
     // El trigger on_auth_user_created usará estos datos para crear el perfil
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
+        emailRedirectTo: `${window.location.origin}/email-verified`,
         data: {
           first_name: firstName,
           last_name: lastName,
@@ -69,32 +72,14 @@ export const signUp = async ({
 
     if (authError) throw authError;
 
-    // Intentar crear perfil manualmente (backup si el trigger no funciona)
-    try {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: authData.user.id,
-          email,
-          nickname,
-          first_name: firstName,
-          last_name: lastName,
-          birth_date: birthDate,
-          country,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'id',
-          ignoreDuplicates: true
-        });
+    console.log('✅ Usuario registrado en auth:', authData.user?.id);
 
-      if (profileError) {
-        console.warn('Perfil será creado por trigger:', profileError.message);
-      }
-    } catch (e) {
-      // El trigger lo creará, no es error crítico
-      console.warn('Perfil se creará automáticamente');
-    }
+    // Cerrar sesión inmediatamente para forzar verificación de email
+    // Esto previene que el usuario sea redirigido al dashboard antes de verificar
+    await supabase.auth.signOut();
+
+    // NO intentar crear el perfil manualmente - el trigger lo hará
+    // Esto evita que se quede esperando y hace el registro más rápido
 
     return { 
       user: authData.user, 
@@ -102,8 +87,30 @@ export const signUp = async ({
       error: null 
     };
   } catch (error) {
-    console.error('Error en registro:', error);
+    console.error('❌ Error en registro:', error);
     return { user: null, error };
+  }
+};
+
+/**
+ * Reenviar email de verificación
+ */
+export const resendVerificationEmail = async (email) => {
+  try {
+    const { data, error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/email-verified`
+      }
+    });
+
+    if (error) throw error;
+
+    return { success: true, error: null };
+  } catch (error) {
+    console.error('❌ Error reenviando email:', error);
+    return { success: false, error: error.message };
   }
 };
 
@@ -119,6 +126,12 @@ export const signIn = async (email, password) => {
 
     if (error) throw error;
 
+    // Verificar si el email está confirmado
+    if (!data.user.email_confirmed_at) {
+      await supabase.auth.signOut();
+      throw new Error('Por favor verifica tu correo electrónico antes de iniciar sesión. Revisa tu bandeja de entrada.');
+    }
+
     // Obtener perfil del usuario (puede no existir aún)
     let profile = null;
     try {
@@ -130,10 +143,14 @@ export const signIn = async (email, password) => {
       
       if (!profileError && profileData) {
         profile = profileData;
+      } else if (profileError && profileError.name !== 'AbortError' && !profileError.message?.includes('AbortError')) {
+        console.warn('Error obteniendo perfil:', profileError.message);
       }
     } catch (e) {
-      // Perfil no existe, continuar sin él
-      console.warn('Perfil no encontrado, se creará automáticamente');
+      // Ignorar AbortError
+      if (e.name !== 'AbortError' && !e.message?.includes('AbortError')) {
+        console.warn('Perfil no encontrado, se creará automáticamente');
+      }
     }
 
     // Verificar si la cuenta está suspendida
@@ -144,6 +161,9 @@ export const signIn = async (email, password) => {
 
     return { user: data.user, profile, error: null };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) {
+      return { user: null, profile: null, error: null };
+    }
     console.error('Error en login:', error);
     return { user: null, profile: null, error };
   }
@@ -389,6 +409,56 @@ export const checkPasswordRecoverySession = async () => {
   }
 };
 
+/**
+ * Eliminar cuenta completa del usuario
+ * Elimina todos los datos relacionados y la cuenta de auth
+ */
+export const deleteAccount = async (userId) => {
+  try {
+    console.log('🗑️ Iniciando eliminación de cuenta:', userId);
+
+    // 1. Eliminar datos relacionados en orden
+    await supabase.from('expenses').delete().eq('user_id', userId);
+    await supabase.from('monthly_incomes').delete().eq('user_id', userId);
+    await supabase.from('virtual_friends').delete().eq('user_id', userId);
+    await supabase.from('change_requests').delete().eq('user_id', userId);
+    await supabase.from('notifications').delete().eq('user_id', userId);
+    
+    // Eliminar deudas (como acreedor y deudor)
+    await supabase.from('debts').delete().or(`creditor_id.eq.${userId},debtor_id.eq.${userId}`);
+    
+    // Eliminar amistades
+    await supabase.from('friendships').delete().or(`user_id.eq.${userId},friend_id.eq.${userId}`);
+    
+    // 2. Eliminar avatar del storage
+    const { data: files } = await supabase.storage
+      .from('avatars')
+      .list(userId);
+    
+    if (files && files.length > 0) {
+      const filesToDelete = files.map(f => `${userId}/${f.name}`);
+      await supabase.storage.from('avatars').remove(filesToDelete);
+    }
+
+    // 3. Eliminar perfil
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', userId);
+
+    if (profileError) throw profileError;
+
+    // 4. Cerrar sesión (el usuario ya no existe)
+    await supabase.auth.signOut();
+
+    console.log('✅ Cuenta eliminada exitosamente');
+    return { error: null };
+  } catch (error) {
+    console.error('❌ Error eliminando cuenta:', error);
+    return { error };
+  }
+};
+
 export default {
   signUp,
   signIn,
@@ -399,5 +469,6 @@ export default {
   sendPasswordResetEmail,
   updatePasswordWithToken,
   changePassword,
-  checkPasswordRecoverySession
+  checkPasswordRecoverySession,
+  deleteAccount
 };

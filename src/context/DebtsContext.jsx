@@ -4,8 +4,7 @@
  */
 import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
-import debtsService from '../services/debtsService';
-
+import debtsService from '../services/debtsService';import { supabase } from '../services/supabase';
 const DebtsContext = createContext(null);
 
 export const useDebts = () => {
@@ -22,6 +21,7 @@ export const DebtsProvider = ({ children }) => {
   const [debtsAsDebtor, setDebtsAsDebtor] = useState([]);
   const [summary, setSummary] = useState(null);
   const [debtsByFriend, setDebtsByFriend] = useState([]);
+  const [pendingDebtsCount, setPendingDebtsCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -47,6 +47,13 @@ export const DebtsProvider = ({ children }) => {
       setDebtsAsDebtor(debtorResult.debts || []);
       setSummary(summaryResult.summary || null);
       setDebtsByFriend(byFriendResult.debtsByFriend || []);
+      
+      // Calcular deudas pendientes (que me deben y no están pagadas)
+      const pendingCount = (creditorResult.debts || []).filter(debt => 
+        debt.status === 'pending' || debt.status === 'partial'
+      ).length;
+      setPendingDebtsCount(pendingCount);
+      
       setError(null);
     } catch (err) {
       console.error('Error cargando deudas:', err);
@@ -58,6 +65,7 @@ export const DebtsProvider = ({ children }) => {
   };
 
   useEffect(() => {
+    // Cargar inmediatamente sin timeout
     if (user?.id && user.id !== userIdRef.current) {
       userIdRef.current = user.id;
       loadDebts(user.id);
@@ -66,24 +74,57 @@ export const DebtsProvider = ({ children }) => {
       setDebtsAsCreditor([]);
       setDebtsAsDebtor([]);
       setSummary(null);
+      setPendingDebtsCount(0);
     }
+  }, [user?.id]);
+
+  // Real-time subscription para debts
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel('debts-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'debts',
+          filter: `creditor_id=eq.${user.id}`
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            // Recargar deudas cuando hay cambios
+            loadingRef.current = false;
+            loadDebts(user.id);
+          } else if (payload.eventType === 'DELETE') {
+            // Actualizar la lista
+            setDebtsAsCreditor(prev => prev.filter(debt => debt.id !== payload.old.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user?.id]);
 
   const createDebt = async (debtData) => {
     if (!user) return { success: false };
     
     try {
-      const result = await debtsService.createDebt({
-        ...debtData,
-        creditorId: user.id
-      });
+      // NO sobrescribir creditorId ni debtorId - vienen correctos desde Debts.jsx
+      const result = await debtsService.createDebt(debtData);
       
       if (result.error) {
         return { success: false, error: result.error };
       }
       
+      // Recargar inmediatamente sin respetar el flag de loading
       loadingRef.current = false;
       await loadDebts(user.id);
+      
       return { success: true, debt: result.debt };
     } catch (err) {
       return { success: false, error: err };
@@ -120,9 +161,9 @@ export const DebtsProvider = ({ children }) => {
     }
   };
 
-  const markAsPaid = async (debtId) => {
+  const markAsPaid = async (debtId, markedByCreditor = false) => {
     try {
-      const result = await debtsService.markDebtAsPaid(debtId);
+      const result = await debtsService.markDebtAsPaid(debtId, markedByCreditor);
       if (result.error) {
         return { success: false, error: result.error };
       }
@@ -149,7 +190,36 @@ export const DebtsProvider = ({ children }) => {
     acceptDebt,
     rejectDebt,
     markAsPaid,
-    refreshDebts: () => { loadingRef.current = false; loadDebts(user?.id); }
+    pendingDebtsCount,
+    refreshDebts: () => { loadingRef.current = false; loadDebts(user?.id); },
+    // Funciones helper para multi-moneda
+    getDebtsByCurrency: (currency) => {
+      if (!currency) return [...debtsAsCreditor, ...debtsAsDebtor];
+      return [...debtsAsCreditor, ...debtsAsDebtor].filter(debt => debt.currency === currency);
+    },
+    getAvailableCurrencies: () => {
+      const currencies = new Set(
+        [...debtsAsCreditor, ...debtsAsDebtor]
+          .map(d => d.currency)
+          .filter(Boolean)
+      );
+      return Array.from(currencies);
+    },
+    getSummaryByCurrency: (currency) => {
+      const filteredCreditor = debtsAsCreditor.filter(d => d.currency === currency);
+      const filteredDebtor = debtsAsDebtor.filter(d => d.currency === currency);
+      
+      return {
+        totalOwedToMe: filteredCreditor
+          .filter(d => d.status === 'accepted')
+          .reduce((sum, d) => sum + parseFloat(d.amount || 0), 0),
+        totalIOwe: filteredDebtor
+          .filter(d => d.status === 'accepted')
+          .reduce((sum, d) => sum + parseFloat(d.amount || 0), 0),
+        countOwedToMe: filteredCreditor.filter(d => d.status === 'accepted').length,
+        countIOwe: filteredDebtor.filter(d => d.status === 'accepted').length
+      };
+    }
   };
 
   return (

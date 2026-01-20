@@ -89,9 +89,39 @@
   margin-top: var(--spacing-sm);
 }
 
+.confirmationActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
 .resendHint {
-  text-align: center;
-  font-size: 0.8rem;
+  text-align: left;
+  font-size: 0.85rem;
   color: var(--text-muted);
-  margin-top: var(--spacing-md);
+  background: var(--bg-secondary);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--primary);
+}
+
+.resendHint p {
+  margin: 0 0 var(--spacing-sm) 0;
+  color: var(--text-primary);
+}
+
+.resendHint ul {
+  margin: var(--spacing-sm) 0 0 0;
+  padding-left: var(--spacing-lg);
+}
+
+.resendHint li {
+  margin: var(--spacing-xs) 0;
+  line-height: 1.5;
+}
+
+.resendHint strong {
+  color: var(--primary);
+  font-weight: 600;
 }

@@ -17,11 +17,45 @@
   cursor: pointer;
   border: none;
   text-decoration: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  position: relative;
+  overflow: hidden;
+  min-height: 44px;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn:active::before {
+  width: 300px;
+  height: 300px;
 }
 
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .btn:hover:not(:disabled) {
+    transform: none;
+  }
+  
+  .btn:active:not(:disabled) {
+    transform: scale(0.97);
+  }
 }
 
 .btn-primary {
@@ -115,12 +149,23 @@
   border-radius: var(--radius-md);
   background: white;
   transition: all var(--transition-fast);
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .input:focus {
   outline: none;
   border-color: var(--primary-500);
   box-shadow: 0 0 0 3px var(--primary-100);
+  transform: scale(1.01);
+}
+
+@media (pointer: coarse) {
+  .input {
+    font-size: 16px;
+    min-height: 48px;
+    padding: 0.75rem var(--spacing-md);
+  }
 }
 
 .input:disabled {

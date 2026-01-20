@@ -32,45 +32,41 @@ export const ExpensesProvider = ({ children }) => {
   const loadingRef = useRef(false);
   const userIdRef = useRef(null);
 
-  // Función de carga con timeout
+  // Función de carga simplificada sin timeout
   const loadExpenses = async (forceUserId = null) => {
     const userId = forceUserId || user?.id;
     if (!userId || loadingRef.current) return;
     
+    console.log('🔄 Cargando gastos para usuario:', userId, { month: selectedMonth, year: selectedYear });
     loadingRef.current = true;
     setLoading(true);
-    console.log('🚀 Iniciando carga de gastos...');
-    
-    // Timeout de 30 segundos
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Timeout - Supabase no responde')), 30000)
-    );
+    const startTime = performance.now();
     
     try {
-      // Solo cargar gastos primero (más simple)
-      const expensesResult = await Promise.race([
-        expensesService.getExpenses(userId, { month: selectedMonth, year: selectedYear }),
-        timeoutPromise
-      ]);
+      // Cargar gastos primero (más importante)
+      const expensesResult = await expensesService.getExpenses(userId, { 
+        month: selectedMonth, 
+        year: selectedYear 
+      });
+      console.log(`⏱️ getExpenses tardó: ${(performance.now() - startTime).toFixed(2)}ms - Gastos encontrados: ${expensesResult.expenses?.length || 0}`);
       
-      console.log('✅ Gastos cargados:', expensesResult);
       setExpenses(expensesResult.expenses || []);
       
-      // Cargar stats en paralelo pero sin bloquear
+      // Cargar stats en paralelo sin bloquear
       Promise.all([
         expensesService.getMonthlyStats(userId, selectedYear, selectedMonth),
-        expensesService.getUpcomingPayments(userId),
-        expensesService.getActiveInstallments(userId)
+        expensesService.getUpcomingPayments(userId).catch(() => ({ payments: [], totalDue: 0, count: 0 })),
+        expensesService.getActiveInstallments(userId).catch(() => ({ installments: {} }))
       ]).then(([statsResult, paymentsResult, installmentsResult]) => {
-        console.log('✅ Stats cargados');
         setMonthlyStats(statsResult?.stats || null);
         setUpcomingPayments(paymentsResult || { payments: [], totalDue: 0, count: 0 });
         setActiveInstallments(installmentsResult?.installments || {});
       }).catch(err => {
-        console.warn('⚠️ Error cargando stats:', err);
+        console.warn('Error cargando stats adicionales:', err);
       });
       
       setError(null);
+      console.log('✅ Gastos cargados correctamente:', expenses.length);
     } catch (err) {
       console.error('❌ Error cargando gastos:', err);
       setError(err.message);
@@ -78,14 +74,14 @@ export const ExpensesProvider = ({ children }) => {
     } finally {
       setLoading(false);
       loadingRef.current = false;
-      console.log('🏁 Carga finalizada');
     }
   };
 
-  // Cargar solo cuando cambia el usuario
+  // Cargar solo cuando cambia el usuario (sin delay, es crítico)
   useEffect(() => {
     if (user?.id && user.id !== userIdRef.current) {
       userIdRef.current = user.id;
+      // Sin timeout - cargar inmediatamente
       loadExpenses(user.id);
     } else if (!user?.id) {
       userIdRef.current = null;
@@ -114,9 +110,11 @@ export const ExpensesProvider = ({ children }) => {
         return { success: false, error: result.error };
       }
       
-      // Recargar
+      // Recargar inmediatamente sin respetar el flag de loading
+      const prevLoadingFlag = loadingRef.current;
       loadingRef.current = false;
       await loadExpenses(user.id);
+      
       return { success: true, expense: result.expense };
     } catch (err) {
       return { success: false, error: err };
@@ -165,6 +163,49 @@ export const ExpensesProvider = ({ children }) => {
     }
   };
 
+  // Función para obtener estadísticas de un mes específico
+  const getMonthlyStats = async (month, year) => {
+    if (!user?.id) return null;
+    try {
+      const result = await expensesService.getMonthlyStats(user.id, year, month);
+      return result.stats;
+    } catch (err) {
+      console.error('Error obteniendo stats mensuales:', err);
+      return null;
+    }
+  };
+
+  // Función helper para filtrar gastos por moneda
+  const getExpensesByCurrency = (currency) => {
+    if (!currency) return expenses;
+    return expenses.filter(expense => expense.currency === currency);
+  };
+
+  // Función helper para obtener monedas únicas
+  const getAvailableCurrencies = () => {
+    const currencies = new Set(expenses.map(e => e.currency).filter(Boolean));
+    return Array.from(currencies);
+  };
+
+  // Función para calcular stats por moneda
+  const getStatsByCurrency = (currency) => {
+    const filteredExpenses = getExpensesByCurrency(currency);
+    const totalSpent = filteredExpenses
+      .filter(e => e.is_paid)
+      .reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+    const totalPending = filteredExpenses
+      .filter(e => !e.is_paid)
+      .reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+    
+    return {
+      totalSpent,
+      totalPending,
+      count: filteredExpenses.length,
+      paidCount: filteredExpenses.filter(e => e.is_paid).length,
+      pendingCount: filteredExpenses.filter(e => !e.is_paid).length
+    };
+  };
+
   const value = {
     expenses,
     monthlyStats,
@@ -180,6 +221,10 @@ export const ExpensesProvider = ({ children }) => {
     markAsPaid,
     updateExpense,
     deleteExpense,
+    getMonthlyStats,
+    getExpensesByCurrency,
+    getAvailableCurrencies,
+    getStatsByCurrency,
     refreshExpenses: () => { loadingRef.current = false; loadExpenses(user?.id); },
     categories: expensesService.EXPENSE_CATEGORIES,
     paymentSources: expensesService.PAYMENT_SOURCES

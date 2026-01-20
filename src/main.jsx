@@ -1,7 +1,6 @@
 /**
  * main.jsx - Entry point de la aplicación
  */
-import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.jsx';
 import { 
@@ -16,8 +15,7 @@ import './styles/globals.css';
 import './styles/components.css';
 
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <UIProvider>
+  <UIProvider>
       <AuthProvider>
         <NotificationsProvider>
           <FriendsProvider>
@@ -30,5 +28,4 @@ createRoot(document.getElementById('root')).render(
         </NotificationsProvider>
       </AuthProvider>
     </UIProvider>
-  </StrictMode>,
 );

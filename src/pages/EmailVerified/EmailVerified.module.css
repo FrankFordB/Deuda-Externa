@@ -1,0 +1,102 @@
+.successIcon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  animation: scaleIn 0.5s ease-out;
+}
+
+.successMessage {
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.checkmark {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1.5rem;
+}
+
+.checkmarkCircle {
+  width: 80px;
+  height: 80px;
+  position: relative;
+  display: inline-block;
+  vertical-align: top;
+  border-radius: 50%;
+  border: 4px solid var(--success, #22c55e);
+  animation: scaleIn 0.4s ease-out;
+}
+
+.checkmarkStem {
+  position: absolute;
+  width: 4px;
+  height: 30px;
+  background-color: var(--success, #22c55e);
+  left: 36px;
+  top: 28px;
+  transform: rotate(45deg);
+  animation: stemGrow 0.3s ease-out 0.2s both;
+}
+
+.checkmarkKick {
+  position: absolute;
+  width: 4px;
+  height: 15px;
+  background-color: var(--success, #22c55e);
+  left: 26px;
+  top: 43px;
+  transform: rotate(-45deg);
+  animation: kickGrow 0.3s ease-out 0.4s both;
+}
+
+.messageText {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+
+.redirectText {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+}
+
+.redirectText strong {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes stemGrow {
+  from {
+    height: 0;
+  }
+  to {
+    height: 30px;
+  }
+}
+
+@keyframes kickGrow {
+  from {
+    height: 0;
+  }
+  to {
+    height: 15px;
+  }
+}

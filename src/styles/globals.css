@@ -116,6 +116,8 @@
 html {
   font-size: 16px;
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -126,6 +128,16 @@ body {
   background-color: var(--gray-50);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Prevenir zoom en iOS */
+@supports (-webkit-touch-callout: none) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
 a {
@@ -143,6 +155,9 @@ button {
   cursor: pointer;
   border: none;
   background: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  touch-action: manipulation;
 }
 
 input,
@@ -150,6 +165,26 @@ select,
 textarea {
   font-family: inherit;
   font-size: 1rem;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Mejoras táctiles para móviles */
+button,
+a,
+[role="button"],
+[role="tab"],
+input[type="checkbox"],
+input[type="radio"] {
+  min-height: 44px;
+  min-width: 44px;
+  touch-action: manipulation;
+}
+
+@media (pointer: coarse) {
+  button,
+  a[role="button"] {
+    min-height: 48px;
+  }
 }
 
 img {

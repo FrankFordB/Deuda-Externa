@@ -41,7 +41,7 @@ const getPasswordStrength = (password) => {
 };
 
 const Settings = () => {
-  const { changePassword, signOut } = useAuth();
+  const { changePassword, signOut, deleteAccount } = useAuth();
   const { showSuccess, showError, siteConfig } = useUI();
 
   const [passwordData, setPasswordData] = useState({
@@ -52,6 +52,8 @@ const Settings = () => {
   const [changingPassword, setChangingPassword] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [touched, setTouched] = useState({});
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handlePasswordChange = (e) => {
     setPasswordData(prev => ({
@@ -104,6 +106,25 @@ const Settings = () => {
   const handleSignOut = async () => {
     if (window.confirm('¿Estás seguro de que quieres cerrar sesión?')) {
       await signOut();
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!showDeleteConfirm) {
+      setShowDeleteConfirm(true);
+      return;
+    }
+
+    setDeletingAccount(true);
+    const result = await deleteAccount();
+    setDeletingAccount(false);
+
+    if (result.success) {
+      showSuccess('Cuenta eliminada correctamente');
+      // El usuario será redirigido automáticamente al login
+    } else {
+      showError(result.error?.message || 'Error al eliminar cuenta');
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -293,16 +314,42 @@ const Settings = () => {
               <div className={styles.settingInfo}>
                 <span className={styles.settingLabel}>Eliminar Cuenta</span>
                 <span className={styles.settingHint}>
-                  Esta acción es irreversible. Se eliminarán todos tus datos.
+                  Esta acción es irreversible. Se eliminarán todos tus datos permanentemente.
                 </span>
+                {showDeleteConfirm && (
+                  <div className={styles.deleteConfirmBox}>
+                    <span className={styles.confirmText}>
+                      ⚠️ ¿Estás completamente seguro? Esta acción NO se puede deshacer.
+                    </span>
+                    <div className={styles.confirmActions}>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => setShowDeleteConfirm(false)}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button 
+                        variant="danger" 
+                        size="sm"
+                        onClick={handleDeleteAccount}
+                        loading={deletingAccount}
+                      >
+                        Sí, eliminar mi cuenta
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
-              <Button 
-                variant="danger" 
-                disabled
-                title="Contacta al administrador para eliminar tu cuenta"
-              >
-                Eliminar Cuenta
-              </Button>
+              {!showDeleteConfirm && (
+                <Button 
+                  variant="danger"
+                  onClick={handleDeleteAccount}
+                  disabled={deletingAccount}
+                >
+                  Eliminar Cuenta
+                </Button>
+              )}
             </div>
           </div>
         </Card>

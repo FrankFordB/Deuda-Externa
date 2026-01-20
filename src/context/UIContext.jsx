@@ -30,17 +30,12 @@ export const UIProvider = ({ children }) => {
     let isMounted = true;
     
     const loadConfig = async () => {
-      try {
-        const { config } = await adminService.getSiteConfig();
-        if (isMounted && config) {
-          setSiteConfig(config);
-        }
-      } catch (err) {
-        // Ignorar AbortError
-        if (err.name === 'AbortError') return;
-        console.error('Error cargando config:', err);
+      const { config } = await adminService.getSiteConfig();
+      if (isMounted && config) {
+        setSiteConfig(config);
       }
     };
+    
     loadConfig();
     
     return () => {

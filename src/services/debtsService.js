@@ -2,20 +2,24 @@
  * Debts Service - Manejo de deudas entre amigos
  */
 import { supabase } from './supabase';
+import { createNotification } from './notificationsService';
 
 /**
  * Crear una nueva deuda
  * Soporta tanto amigos reales como virtuales, con cuotas y fechas
+ * direction: 'i_owe' (yo debo) | 'owed_to_me' (me deben)
  */
 export const createDebt = async (debtData) => {
   try {
-    const isVirtualDebtor = debtData.debtorType === 'virtual';
+    const isVirtualFriend = debtData.friendType === 'virtual';
+    const isIOwe = debtData.direction === 'i_owe';
     const installments = parseInt(debtData.installments) || 1;
     const totalAmount = parseFloat(debtData.amount);
     const installmentAmount = totalAmount / installments;
     
     const insertData = {
       creditor_id: debtData.creditorId,
+      debtor_id: debtData.debtorId,
       amount: totalAmount,
       description: debtData.description,
       category: debtData.category || 'other',
@@ -24,22 +28,43 @@ export const createDebt = async (debtData) => {
       installments: installments,
       installment_amount: installmentAmount,
       total_amount: totalAmount,
+      currency: debtData.currency || 'ARS',
+      currency_symbol: debtData.currency_symbol || '$',
+      bank_account_id: debtData.bank_account_id || null,
       created_at: new Date().toISOString()
     };
 
-    if (isVirtualDebtor) {
-      // Deuda con amigo virtual: se auto-acepta
-      insertData.virtual_friend_id = debtData.debtorId;
-      insertData.debtor_id = null;
+    if (isVirtualFriend) {
+      // Deuda con amigo virtual: se auto-acepta siempre
+      insertData.virtual_friend_id = debtData.friendId;
       insertData.debtor_type = 'virtual';
-      insertData.status = 'accepted'; // Auto-aceptada
+      insertData.status = 'accepted';
       insertData.accepted_at = new Date().toISOString();
+      
+      // Si yo debo a un amigo virtual, ajustar los IDs
+      if (isIOwe) {
+        insertData.debtor_id = debtData.debtorId; // Yo
+        insertData.creditor_id = null; // El virtual no tiene creditor_id
+      } else {
+        insertData.creditor_id = debtData.creditorId; // Yo
+        insertData.debtor_id = null; // El virtual no tiene debtor_id
+      }
     } else {
-      // Deuda con amigo real: queda pendiente
-      insertData.debtor_id = debtData.debtorId;
+      // Deuda con amigo real
       insertData.virtual_friend_id = null;
       insertData.debtor_type = 'real';
-      insertData.status = 'pending';
+      
+      // Asignar los IDs correctamente según quien crea la deuda
+      insertData.creditor_id = debtData.creditorId;
+      insertData.debtor_id = debtData.debtorId;
+      
+      if (isIOwe) {
+        // YO DEBO: queda pendiente hasta que el amigo acepte
+        insertData.status = 'pending';
+      } else {
+        // ME DEBEN: queda pendiente hasta que el amigo acepte
+        insertData.status = 'pending';
+      }
     }
 
     const { data, error } = await supabase
@@ -55,8 +80,58 @@ export const createDebt = async (debtData) => {
       await createDebtInstallments(data.id, installments, installmentAmount, debtData.dueDate);
     }
 
-    return { debt: data, error: null };
+    // Enviar notificación al amigo si es amigo real
+    if (!isVirtualFriend && data) {
+      // El creador de la deuda es quien está logueado
+      // Determinar quién es el creador basado en la dirección
+      const creatorId = isIOwe ? debtData.debtorId : debtData.creditorId;
+      
+      // DEBUG: Ver valores antes de crear notificación
+      console.log('🔍 DEBUG - Creando notificación:');
+      console.log('  - isIOwe:', isIOwe);
+      console.log('  - creatorId (quien crea la deuda):', creatorId);
+      console.log('  - debtData.friendId (debería ser el amigo):', debtData.friendId);
+      console.log('  - debtData.creditorId:', debtData.creditorId);
+      console.log('  - debtData.debtorId:', debtData.debtorId);
+      console.log('  - direction:', debtData.direction);
+      
+      // Obtener nombre del usuario que crea la deuda
+      const { data: creatorProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', creatorId)
+        .single();
+
+      const creatorName = creatorProfile?.full_name || 'Un amigo';
+      
+      // Determinar el receptor de la notificación (siempre es el friendId)
+      const recipientId = debtData.friendId;
+      
+      console.log('  - recipientId (quien recibirá notificación):', recipientId);
+      console.log('  - creatorName:', creatorName);
+      
+      // Crear notificación
+      await createNotification({
+        userId: recipientId,
+        type: 'debt_request',
+        title: isIOwe ? 'Nueva deuda - Te deben dinero' : 'Nueva deuda - Debes dinero',
+        message: isIOwe 
+          ? `${creatorName} registró que te debe ${debtData.currency_symbol}${totalAmount.toFixed(2)} ${debtData.currency} - ${debtData.description}`
+          : `${creatorName} registró que le debes ${debtData.currency_symbol}${totalAmount.toFixed(2)} ${debtData.currency} - ${debtData.description}`,
+        data: {
+          debt_id: data.id,
+          amount: totalAmount,
+          currency: debtData.currency,
+          description: debtData.description
+        },
+        actionRequired: true,
+        actionType: 'accept_debt'
+      });
+    }
+
+    return { debt: data, error: null, success: true };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { debt: null, error: null };
     console.error('Error creando deuda:', error);
     return { debt: null, error };
   }
@@ -101,30 +176,46 @@ const createDebtInstallments = async (debtId, totalInstallments, amount, firstDu
  */
 export const getDebtInstallments = async (debtId) => {
   try {
+    if (!debtId) {
+      return { installments: [], error: null };
+    }
+
     const { data, error } = await supabase
       .from('debt_installments')
       .select('*')
       .eq('debt_id', debtId)
       .order('installment_number', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      // Ignorar errores 400/404 silenciosamente
+      if (error.code === 'PGRST116' || error.message?.includes('400')) {
+        return { installments: [], error: null };
+      }
+      throw error;
+    }
     return { installments: data || [], error: null };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { installments: [], error: null };
     console.error('Error obteniendo cuotas:', error);
-    return { installments: [], error };
+    return { installments: [], error: null };
   }
 };
 
 /**
  * Marcar una cuota como pagada
  */
-export const markInstallmentAsPaid = async (installmentId) => {
+export const markInstallmentAsPaid = async (installmentId, userId) => {
   try {
     const { data, error } = await supabase
       .from('debt_installments')
       .update({
         paid: true,
-        paid_at: new Date().toISOString()
+        paid_at: new Date().toISOString(),
+        paid_by: userId,
+        payment_reverted: false,
+        reverted_at: null,
+        reverted_by: null,
+        revert_reason: null
       })
       .eq('id', installmentId)
       .select()
@@ -132,31 +223,60 @@ export const markInstallmentAsPaid = async (installmentId) => {
 
     if (error) throw error;
 
-    // Verificar si todas las cuotas están pagadas
-    if (data) {
-      const { data: allInstallments } = await supabase
-        .from('debt_installments')
-        .select('paid')
-        .eq('debt_id', data.debt_id);
+    // El trigger automáticamente actualiza paid_installments y verifica si la deuda está completa
+    return { installment: data, error: null, success: true };
+  } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { installment: null, error: null };
+    console.error('Error marcando cuota como pagada:', error);
+    return { installment: null, error, success: false };
+  }
+};
 
-      const allPaid = allInstallments?.every(i => i.paid);
-      
-      if (allPaid) {
-        // Marcar la deuda principal como pagada
-        await supabase
-          .from('debts')
-          .update({
-            status: 'paid',
-            paid_at: new Date().toISOString()
-          })
-          .eq('id', data.debt_id);
-      }
+/**
+ * Revertir pago de una cuota
+ */
+export const revertInstallmentPayment = async (installmentId, userId, reason = 'Reversión manual') => {
+  try {
+    // Primero obtener la cuota para verificar
+    const { data: installment, error: fetchError } = await supabase
+      .from('debt_installments')
+      .select('*, debt:debts!debt_id(*)')
+      .eq('id', installmentId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    if (!installment.paid) {
+      return { 
+        installment: null, 
+        error: { message: 'La cuota no está marcada como pagada' },
+        success: false 
+      };
     }
 
-    return { installment: data, error: null };
+    // Revertir el pago
+    const { data, error } = await supabase
+      .from('debt_installments')
+      .update({
+        paid: false,
+        paid_at: null,
+        payment_reverted: true,
+        reverted_at: new Date().toISOString(),
+        reverted_by: userId,
+        revert_reason: reason
+      })
+      .eq('id', installmentId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // El trigger automáticamente actualiza paid_installments y el estado de la deuda
+    return { installment: data, error: null, success: true };
   } catch (error) {
-    console.error('Error marcando cuota como pagada:', error);
-    return { installment: null, error };
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { installment: null, error: null };
+    console.error('Error revirtiendo pago de cuota:', error);
+    return { installment: null, error, success: false };
   }
 };
 
@@ -197,6 +317,7 @@ export const getDebtsAsCreditor = async (userId) => {
     
     return { debts: normalizedDebts, error: null };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { debts: [], error: null };
     console.error('Error obteniendo deudas como acreedor:', error);
     return { debts: [], error };
   }
@@ -219,6 +340,7 @@ export const getDebtsAsDebtor = async (userId) => {
     if (error) throw error;
     return { debts: data, error: null };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { debts: [], error: null };
     console.error('Error obteniendo deudas como deudor:', error);
     return { debts: [], error };
   }
@@ -264,6 +386,9 @@ export const acceptDebt = async (debtId, userId) => {
         installments: 1,
         current_installment: 1,
         debt_id: debtId,
+        bank_account_id: debt.bank_account_id, // Vincular con cuenta bancaria si existe
+        currency: debt.currency || 'ARS', // Incluir moneda
+        currency_symbol: debt.currency_symbol || '$', // Incluir símbolo
         created_at: new Date().toISOString()
       })
       .select()
@@ -271,8 +396,9 @@ export const acceptDebt = async (debtId, userId) => {
 
     if (expenseError) throw expenseError;
 
-    return { debt: { ...debt, status: 'accepted' }, expense, error: null };
+    return { debt: { ...debt, status: 'accepted' }, expense, error: null, success: true };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { debt: null, expense: null, error: null };
     console.error('Error aceptando deuda:', error);
     return { debt: null, expense: null, error };
   }
@@ -296,6 +422,7 @@ export const rejectDebt = async (debtId) => {
     if (error) throw error;
     return { debt: data, error: null };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { debt: null, error: null };
     console.error('Error rechazando deuda:', error);
     return { debt: null, error };
   }
@@ -303,32 +430,84 @@ export const rejectDebt = async (debtId) => {
 
 /**
  * Marcar deuda como pagada
+ * Solo funciona para deudas con amigos virtuales (debtor_type = 'virtual')
+ * Para amigos reales, se requiere confirmación del acreedor
  */
-export const markDebtAsPaid = async (debtId) => {
+export const markDebtAsPaid = async (debtId, markedByCreditor = false) => {
   try {
-    const { data, error } = await supabase
+    // Obtener información de la deuda primero
+    const { data: debt, error: fetchError } = await supabase
       .from('debts')
-      .update({ 
-        status: 'paid',
-        paid_at: new Date().toISOString()
-      })
+      .select('*, debtor:debtor_id(id, first_name, last_name, full_name), creditor:creditor_id(id, first_name, last_name, full_name)')
       .eq('id', debtId)
-      .select()
       .single();
 
-    if (error) throw error;
+    if (fetchError) throw fetchError;
 
-    // También marcar el gasto relacionado como pagado
-    await supabase
-      .from('expenses')
-      .update({ 
-        is_paid: true,
-        paid_at: new Date().toISOString()
-      })
-      .eq('debt_id', debtId);
+    // Si es deuda virtual, permitir marcar como pagada/no pagada (toggle)
+    if (debt.debtor_type === 'virtual') {
+      const newStatus = debt.status === 'paid' ? 'accepted' : 'paid';
+      const { data, error } = await supabase
+        .from('debts')
+        .update({ 
+          status: newStatus,
+          paid_at: newStatus === 'paid' ? new Date().toISOString() : null
+        })
+        .eq('id', debtId)
+        .select()
+        .single();
 
-    return { debt: data, error: null };
+      if (error) throw error;
+      return { debt: data, error: null, wasPaid: debt.status === 'paid' };
+    }
+
+    // Si es deuda real y el acreedor marca como pagada
+    if (markedByCreditor) {
+      const currentStatus = debt.paid_by_creditor || false;
+      
+      const { data, error } = await supabase
+        .from('debts')
+        .update({ 
+          paid_by_creditor: !currentStatus,
+          creditor_marked_paid_at: !currentStatus ? new Date().toISOString() : null
+        })
+        .eq('id', debtId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Enviar notificación al deudor
+      if (!currentStatus) {
+        const creditorName = debt.creditor?.full_name || debt.creditor?.first_name || 'Tu acreedor';
+        await createNotification({
+          userId: debt.debtor_id,
+          type: 'payment_marked',
+          title: '✅ Pago registrado',
+          message: `${creditorName} marcó como pagada la deuda "${debt.description}". Por favor confirma si es correcto.`,
+          data: {
+            debt_id: debtId,
+            amount: debt.amount,
+            currency: debt.currency,
+            description: debt.description
+          },
+          actionRequired: true,
+          actionType: 'confirm_payment_marked'
+        });
+      }
+
+      return { debt: data, error: null };
+    }
+
+    // Validar que solo se puede marcar como pagada si es deuda virtual
+    return { 
+      debt: null, 
+      error: { 
+        message: 'No puedes marcar como pagada una deuda con una persona real. Solicita confirmación de pago al acreedor.' 
+      } 
+    };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { debt: null, error: null };
     console.error('Error marcando deuda como pagada:', error);
     return { debt: null, error };
   }
@@ -378,6 +557,7 @@ export const getDebtsSummary = async (userId) => {
       error: null
     };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { summary: null, error: null };
     console.error('Error obteniendo resumen de deudas:', error);
     return { summary: null, error };
   }
@@ -412,6 +592,9 @@ export const getDebtsByFriend = async (userId) => {
     const byFriend = {};
 
     (asCreditor || []).forEach(d => {
+      // Skip if debtor is null
+      if (!d.debtor || !d.debtor.id) return;
+      
       const friendId = d.debtor.id;
       if (!byFriend[friendId]) {
         byFriend[friendId] = {
@@ -424,6 +607,9 @@ export const getDebtsByFriend = async (userId) => {
     });
 
     (asDebtor || []).forEach(d => {
+      // Skip if creditor is null
+      if (!d.creditor || !d.creditor.id) return;
+      
       const friendId = d.creditor.id;
       if (!byFriend[friendId]) {
         byFriend[friendId] = {
@@ -442,6 +628,7 @@ export const getDebtsByFriend = async (userId) => {
 
     return { debtsByFriend: Object.values(byFriend), error: null };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { debtsByFriend: [], error: null };
     console.error('Error obteniendo deudas por amigo:', error);
     return { debtsByFriend: [], error };
   }

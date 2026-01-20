@@ -1,0 +1,109 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border-radius: 8px;
+  border: 2px solid #3b82f6;
+}
+
+.infoIcon {
+  font-size: 1.5rem;
+}
+
+.info p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #1e40af;
+}
+
+.info strong {
+  font-weight: 700;
+  color: #1e3a8a;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #e5e7eb;
+}
+
+.rightActions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+/* Confirmación de eliminación */
+.confirmDelete {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.warningIcon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  animation: shake 0.5s;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
+}
+
+.confirmDelete h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.5rem;
+  color: #dc2626;
+}
+
+.confirmDelete p {
+  margin: 0 0 2rem 0;
+  color: #6b7280;
+  max-width: 400px;
+}
+
+.confirmActions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .rightActions {
+    width: 100%;
+  }
+
+  .rightActions button {
+    flex: 1;
+  }
+}

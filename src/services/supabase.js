@@ -23,4 +23,26 @@ export const supabase = createClient(
   }
 );
 
+// Silenciar errores globales de AbortError (ocurren cuando se cancelan peticiones al desmontar componentes)
+if (typeof window !== 'undefined') {
+  const originalConsoleError = console.error;
+  console.error = (...args) => {
+    // Filtrar AbortError
+    if (args[0]?.message?.includes?.('AbortError') || 
+        args[0]?.toString?.()?.includes?.('AbortError') ||
+        args[1]?.message?.includes?.('AbortError')) {
+      return; // No mostrar
+    }
+    originalConsoleError.apply(console, args);
+  };
+  
+  // Capturar errores no manejados de promesas
+  window.addEventListener('unhandledrejection', (event) => {
+    if (event.reason?.name === 'AbortError' || 
+        event.reason?.message?.includes?.('AbortError')) {
+      event.preventDefault(); // Silenciar
+    }
+  });
+}
+
 export default supabase;

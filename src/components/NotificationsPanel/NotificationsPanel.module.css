@@ -13,11 +13,22 @@
   padding: 0.5rem;
   cursor: pointer;
   border-radius: 50%;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
 .bellButton:hover {
   background: var(--gray-100);
+  transform: scale(1.05);
+}
+
+.bellButton.hasUnread {
+  animation: ring 4s ease-in-out infinite;
+}
+
+@keyframes ring {
+  0%, 100% { transform: rotate(0deg); }
+  5%, 15% { transform: rotate(15deg); }
+  10%, 20% { transform: rotate(-15deg); }
 }
 
 .bellIcon {
@@ -28,37 +39,73 @@
   position: absolute;
   top: 0;
   right: 0;
-  min-width: 18px;
-  height: 18px;
+  min-width: 20px;
+  height: 20px;
   background: var(--danger);
   color: white;
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: 700;
   border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 4px;
+  padding: 0 5px;
+  border: 2px solid white;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
   animation: pulse 2s infinite;
 }
 
+/* Círculo rojo pulsante */
+.redDot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  background: #ef4444;
+  border-radius: 50%;
+  border: 2px solid white;
+  animation: pulseRed 2s infinite;
+  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+}
+
+@keyframes pulseRed {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
 @keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+  0%, 100% { 
+    transform: scale(1);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+  }
+  50% { 
+    transform: scale(1.15);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.6);
+  }
 }
 
 .panel {
   position: absolute;
   top: calc(100% + 0.5rem);
   right: 0;
-  width: 360px;
-  max-height: 480px;
+  width: 400px;
+  max-height: 600px;
   background: white;
   border-radius: 12px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
   overflow: hidden;
   z-index: 1000;
   animation: slideIn 0.2s ease;
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes slideIn {
@@ -70,6 +117,64 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Pestañas */
+.tabs {
+  display: flex;
+  border-bottom: 2px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #6b7280;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.tab:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.tab.tabActive {
+  color: #667eea;
+  background: white;
+}
+
+.tab.tabActive::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.tabBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.375rem;
+  background: #ef4444;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 999px;
 }
 
 .header {
@@ -276,6 +381,70 @@
 
 :global(.dark) .notification.unread {
   background: rgba(99, 102, 241, 0.1);
+}
+
+/* Próximos vencimientos */
+.upcomingItem {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  background: #f9fafb;
+  border: 2px solid #e5e7eb;
+  transition: all 0.2s;
+}
+
+.upcomingItem:hover {
+  transform: translateX(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.upcomingItem.today {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  border-color: #ef4444;
+}
+
+.upcomingItem.urgent {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-color: #f59e0b;
+}
+
+.upcomingIcon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.upcomingContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.upcomingContent h4 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.upcomingAmount {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #667eea;
+  margin: 0.25rem 0;
+}
+
+.upcomingDate {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.subtitle {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  font-weight: 500;
 }
 
 :global(.dark) .notificationContent h4 {

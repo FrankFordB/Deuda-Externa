@@ -1,7 +1,7 @@
 /**
  * Register Page
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth, useUI } from '../../context';
 import { Button, Input, Select } from '../../components';
@@ -35,7 +35,6 @@ const Register = () => {
     country: ''
   });
   const [formErrors, setFormErrors] = useState({});
-  const [registeredNickname, setRegisteredNickname] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -99,70 +98,38 @@ const Register = () => {
       return;
     }
 
+    console.log('🚀 Iniciando registro...');
+    
     const result = await signUp({
       email: formData.email,
       password: formData.password,
       firstName: formData.firstName,
       lastName: formData.lastName,
       birthDate: formData.birthDate,
-      country: formData.country
+      country: formData.country,
     });
 
+    console.log('🔍 Resultado del registro:', result);
+
     if (result.success) {
-      setRegisteredNickname(result.nickname);
+      console.log('✅ Registro exitoso, redirigiendo a página de confirmación');
       showSuccess('¡Cuenta creada! Revisa tu correo para verificar.');
+      
+      // Redirigir a la página de confirmación de email
+      navigate('/email-verification-sent', { 
+        state: { 
+          email: formData.email,
+          nickname: result.nickname || formData.email.split('@')[0]
+        },
+        replace: true 
+      });
+    } else {
+      console.error('❌ Registro fallido:', result.error);
+      showError(result.error || 'Error al registrar usuario');
     }
   };
 
-  if (registeredNickname) {
-    return (
-      <div className={styles.loginCard}>
-        <div className={styles.header}>
-          <div className={styles.logo}>📧</div>
-          <h1 className={styles.title}>¡Verifica tu correo!</h1>
-          <p className={styles.subtitle}>Te enviamos un email de confirmación</p>
-        </div>
-
-        <div className={styles.body}>
-          <div className={registerStyles.successInfo}>
-            <div className={registerStyles.emailIcon}>✉️</div>
-            <p className={registerStyles.verifyText}>
-              Hemos enviado un enlace de verificación a:
-            </p>
-            <div className={registerStyles.emailAddress}>
-              {formData.email}
-            </div>
-            <p className={registerStyles.verifyInstructions}>
-              Por favor revisa tu bandeja de entrada (y spam) y haz clic en el enlace para activar tu cuenta.
-            </p>
-            
-            <div className={registerStyles.nicknameSection}>
-              <p>Tu nickname único será:</p>
-              <div className={registerStyles.nickname}>
-                @{registeredNickname}
-              </div>
-              <p className={registerStyles.nicknameHint}>
-                Guárdalo, tus amigos lo usarán para agregarte.
-              </p>
-            </div>
-          </div>
-
-          <Button 
-            fullWidth 
-            size="lg"
-            onClick={() => navigate('/login')}
-            icon="🚀"
-          >
-            Ya verifiqué, ir a Iniciar Sesión
-          </Button>
-          
-          <p className={registerStyles.resendHint}>
-            ¿No recibiste el correo? Espera unos minutos o revisa tu carpeta de spam.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  console.log('📝 Renderizando formulario de registro');
 
   return (
     <div className={styles.loginCard}>

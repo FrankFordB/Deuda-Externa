@@ -41,6 +41,7 @@ export const getNotifications = async (userId, onlyUnread = false) => {
     if (error) throw error;
     return { notifications: data || [], error: null };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { notifications: [], error: null };
     console.error('Error obteniendo notificaciones:', error);
     return { notifications: [], error };
   }
@@ -60,8 +61,75 @@ export const getUnreadCount = async (userId) => {
     if (error) throw error;
     return { count: count || 0, error: null };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { count: 0, error: null };
     console.error('Error contando notificaciones:', error);
     return { count: 0, error };
+  }
+};
+
+/**
+ * Obtener contadores de notificaciones para "Yo Debo"
+ */
+export const getDebtorNotificationsCount = async (userId) => {
+  try {
+    const { data, error } = await supabase
+      .rpc('get_debtor_notifications_count', { p_user_id: userId });
+
+    if (error) throw error;
+    return { 
+      counts: data?.[0] || { unread_count: 0, pending_accept_count: 0, payment_marked_count: 0 }, 
+      error: null 
+    };
+  } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) {
+      return { counts: { unread_count: 0, pending_accept_count: 0, payment_marked_count: 0 }, error: null };
+    }
+    console.error('Error obteniendo contadores de deudor:', error);
+    return { counts: { unread_count: 0, pending_accept_count: 0, payment_marked_count: 0 }, error };
+  }
+};
+
+/**
+ * Obtener contadores de notificaciones para "Me Deben"
+ */
+export const getCreditorNotificationsCount = async (userId) => {
+  try {
+    const { data, error } = await supabase
+      .rpc('get_creditor_notifications_count', { p_user_id: userId });
+
+    if (error) throw error;
+    return { 
+      counts: data?.[0] || { unread_count: 0, payment_confirmation_count: 0, collection_due_count: 0 }, 
+      error: null 
+    };
+  } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) {
+      return { counts: { unread_count: 0, payment_confirmation_count: 0, collection_due_count: 0 }, error: null };
+    }
+    console.error('Error obteniendo contadores de acreedor:', error);
+    return { counts: { unread_count: 0, payment_confirmation_count: 0, collection_due_count: 0 }, error };
+  }
+};
+
+/**
+ * Obtener todos los contadores de notificaciones de deudas
+ */
+export const getAllDebtNotificationsCount = async (userId) => {
+  try {
+    const { data, error } = await supabase
+      .rpc('get_all_debt_notifications_count', { p_user_id: userId });
+
+    if (error) throw error;
+    return { 
+      counts: data?.[0] || { total_unread: 0, debtor_unread: 0, creditor_unread: 0, pending_actions: 0 }, 
+      error: null 
+    };
+  } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) {
+      return { counts: { total_unread: 0, debtor_unread: 0, creditor_unread: 0, pending_actions: 0 }, error: null };
+    }
+    console.error('Error obteniendo contadores generales:', error);
+    return { counts: { total_unread: 0, debtor_unread: 0, creditor_unread: 0, pending_actions: 0 }, error };
   }
 };
 
@@ -167,10 +235,11 @@ export const subscribeToNotifications = (userId, onNotification) => {
 
 /**
  * Crear solicitud de confirmación de pago
+ * VERSIÓN CON TRIGGER - La notificación se crea automáticamente en la base de datos
  */
-export const createPaymentConfirmation = async (debtId, requesterId, confirmerId) => {
+export const createPaymentConfirmation = async (debtId, requesterId, confirmerId, debtData = {}) => {
   try {
-    // Crear la solicitud
+    // Solo crear la confirmación - el trigger se encarga de la notificación
     const { data: confirmation, error } = await supabase
       .from('payment_confirmations')
       .insert({
@@ -182,37 +251,12 @@ export const createPaymentConfirmation = async (debtId, requesterId, confirmerId
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error al insertar payment_confirmation:', error);
+      throw error;
+    }
 
-    // Obtener datos de la deuda y el solicitante
-    const { data: debt } = await supabase
-      .from('debts')
-      .select('description, amount')
-      .eq('id', debtId)
-      .single();
-
-    const { data: requester } = await supabase
-      .from('profiles')
-      .select('full_name, email')
-      .eq('id', requesterId)
-      .single();
-
-    // Crear notificación para el confirmador
-    await createNotification({
-      userId: confirmerId,
-      type: 'payment_confirmation',
-      title: '¿Confirmás el pago?',
-      message: `${requester?.full_name || 'Alguien'} dice que pagó la deuda "${debt?.description}" por $${debt?.amount}. ¿Es correcto?`,
-      data: { 
-        confirmation_id: confirmation.id,
-        debt_id: debtId,
-        requester_id: requesterId,
-        amount: debt?.amount
-      },
-      actionRequired: true,
-      actionType: 'confirm_payment'
-    });
-
+    console.log('✅ Confirmación de pago creada, trigger creará la notificación automáticamente');
     return { confirmation, error: null };
   } catch (error) {
     console.error('Error creando confirmación de pago:', error);
@@ -300,6 +344,8 @@ export const getPendingConfirmations = async (userId) => {
 export default {
   getNotifications,
   getUnreadCount,
+  getDebtorNotificationsCount,
+  getCreditorNotificationsCount,
   createNotification,
   markAsRead,
   markAllAsRead,

@@ -16,7 +16,9 @@ export const createExpense = async (expenseData) => {
       category: expenseData.category,
       payment_source: expenseData.paymentSource || 'cash',
       date: expenseData.date || new Date().toISOString().split('T')[0],
-      is_paid: expenseData.isPaid ?? true
+      is_paid: expenseData.isPaid ?? true,
+      currency: expenseData.currency || 'ARS',
+      currency_symbol: expenseData.currency_symbol || '$'
     };
 
     // NO enviar friend_id - causa error 409 por FK constraint
@@ -39,48 +41,58 @@ export const createExpense = async (expenseData) => {
 
     return { expense: data, error: null };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { expense: null, error: null };
     console.error('Error creando gasto:', error);
     return { expense: null, error };
   }
 };
 
 /**
- * Crear cuotas para un gasto
+ * Crear cuotas para un gasto - Comienza desde la fecha especificada
  */
 const createInstallments = async (parentExpense, totalInstallments) => {
   const installmentAmount = parentExpense.amount;
   const installments = [];
 
-  for (let i = 2; i <= totalInstallments; i++) {
+  // Comenzar desde i=1 en lugar de i=2 para que todas las cuotas se creen correctamente
+  for (let i = 1; i < totalInstallments; i++) {
     const dueDate = new Date(parentExpense.date);
-    dueDate.setMonth(dueDate.getMonth() + (i - 1));
+    dueDate.setMonth(dueDate.getMonth() + i);
 
     installments.push({
       user_id: parentExpense.user_id,
       amount: installmentAmount,
-      description: `${parentExpense.description} (Cuota ${i}/${totalInstallments})`,
+      description: `${parentExpense.description} (Cuota ${i + 1}/${totalInstallments})`,
       category: parentExpense.category,
       payment_source: parentExpense.payment_source,
       friend_id: parentExpense.friend_id,
       date: dueDate.toISOString().split('T')[0],
       is_paid: false,
       installments: totalInstallments,
-      current_installment: i,
+      current_installment: i + 1,
       parent_expense_id: parentExpense.id,
+      currency: parentExpense.currency || 'ARS',
+      currency_symbol: parentExpense.currency_symbol || '$',
       created_at: new Date().toISOString()
     });
   }
 
-  // Actualizar el gasto padre con la descripción de cuota
+  // Actualizar el gasto padre con información de cuotas
   await supabase
     .from('expenses')
     .update({
-      description: `${parentExpense.description} (Cuota 1/${totalInstallments})`
+      description: `${parentExpense.description} (Cuota 1/${totalInstallments})`,
+      installments: totalInstallments,
+      current_installment: 1
     })
     .eq('id', parentExpense.id);
 
   if (installments.length > 0) {
-    await supabase.from('expenses').insert(installments);
+    const { error } = await supabase.from('expenses').insert(installments);
+    if (error) {
+      console.error('Error creando cuotas:', error);
+      throw error;
+    }
   }
 };
 
@@ -89,31 +101,37 @@ const createInstallments = async (parentExpense, totalInstallments) => {
  */
 export const getExpenses = async (userId, filters = {}) => {
   try {
-    console.log('🔍 Buscando gastos para:', userId, 'Filtros:', filters);
-    
-    // Prueba simple primero
-    console.log('🧪 Probando conexión a Supabase...');
-    const testStart = Date.now();
-    
-    const { data, error } = await supabase
+    let query = supabase
       .from('expenses')
-      .select('id, description, amount, date')
+      .select('*')
       .eq('user_id', userId)
-      .limit(10);
-    
-    console.log('⏱️ Query tomó:', Date.now() - testStart, 'ms');
-    console.log('📡 Respuesta:', { data, error });
+      .order('date', { ascending: false });
+
+    // Aplicar filtros si existen
+    if (filters.category && filters.category !== 'all') {
+      query = query.eq('category', filters.category);
+    }
+    if (filters.month && filters.year) {
+      const startDate = new Date(filters.year, filters.month - 1, 1);
+      const endDate = new Date(filters.year, filters.month, 0);
+      query = query.gte('date', startDate.toISOString().split('T')[0])
+                   .lte('date', endDate.toISOString().split('T')[0]);
+    }
+    if (filters.isPaid !== undefined) {
+      query = query.eq('is_paid', filters.isPaid);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
-      console.error('❌ Error obteniendo gastos:', error);
-      // Si hay error, devolver array vacío en lugar de fallar
+      console.error('Error obteniendo gastos:', error);
       return { expenses: [], error };
     }
     
-    console.log('📊 Gastos encontrados:', data?.length || 0);
     return { expenses: data || [], error: null };
   } catch (error) {
-    console.error('💥 Error en getExpenses:', error);
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { expenses: [], error: null };
+    console.error('Error en getExpenses:', error);
     return { expenses: [], error };
   }
 };
@@ -123,8 +141,18 @@ export const getExpenses = async (userId, filters = {}) => {
  */
 export const getMonthlyStats = async (userId, year, month) => {
   try {
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0);
+    // Validar parámetros
+    const validYear = parseInt(year) || new Date().getFullYear();
+    const validMonth = parseInt(month) || (new Date().getMonth() + 1);
+    
+    const startDate = new Date(validYear, validMonth - 1, 1);
+    const endDate = new Date(validYear, validMonth, 0);
+    
+    // Validar que las fechas sean válidas
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      console.warn('Fechas inválidas en getMonthlyStats:', { year: validYear, month: validMonth });
+      return { stats: null, error: new Error('Fechas inválidas') };
+    }
 
     const { data: expenses, error } = await supabase
       .from('expenses')
@@ -135,17 +163,20 @@ export const getMonthlyStats = async (userId, year, month) => {
 
     if (error) throw error;
 
-    // Obtener ingreso mensual del perfil (si existe la columna)
+    // Obtener ingreso mensual de la tabla monthly_incomes
     let income = 0;
     try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('monthly_income')
-        .eq('id', userId)
+      const { data: incomeData } = await supabase
+        .from('monthly_incomes')
+        .select('amount')
+        .eq('user_id', userId)
+        .eq('year', year)
+        .eq('month', month)
         .maybeSingle();
-      income = profile?.monthly_income || 0;
+      
+      income = incomeData?.amount || 0;
     } catch (e) {
-      // Columna puede no existir, ignorar
+      console.warn('Error obteniendo ingreso mensual:', e);
     }
 
     const totalSpent = expenses.reduce((sum, exp) => sum + exp.amount, 0);
@@ -179,6 +210,7 @@ export const getMonthlyStats = async (userId, year, month) => {
       error: null
     };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { stats: null, error: null };
     console.error('Error obteniendo estadísticas:', error);
     return { stats: null, error };
   }
@@ -202,53 +234,124 @@ export const markExpenseAsPaid = async (expenseId) => {
     if (error) throw error;
     return { expense: data, error: null };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { expense: null, error: null };
     console.error('Error marcando como pagado:', error);
     return { expense: null, error };
   }
 };
 
 /**
- * Actualizar gasto
+ * Actualizar gasto - maneja amigos ficticios y reales
+ * Si es amigo ficticio (virtual): cambio inmediato
+ * Si es amigo real: crea solicitud de cambio
  */
-export const updateExpense = async (expenseId, updates) => {
+export const updateExpense = async (expenseId, updates, friendType = 'virtual', friendId = null, userId = null) => {
   try {
-    const { data, error } = await supabase
+    const { data: currentExpense, error: fetchError } = await supabase
       .from('expenses')
-      .update(updates)
+      .select('*')
       .eq('id', expenseId)
-      .select()
       .single();
 
-    if (error) throw error;
-    return { expense: data, error: null };
+    if (fetchError) throw fetchError;
+
+    // Si es amigo virtual o no hay amigo involucrado, hacer cambio directo
+    if (friendType === 'virtual' || !friendId) {
+      const { data, error } = await supabase
+        .from('expenses')
+        .update(updates)
+        .eq('id', expenseId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return { expense: data, error: null, needsApproval: false };
+    } else {
+      // Es amigo real, crear change request
+      const changeRequestsService = (await import('./changeRequestsService')).default;
+      
+      const result = await changeRequestsService.createExpenseChangeRequest(
+        userId || currentExpense.user_id,
+        friendId,
+        expenseId,
+        'update',
+        updates,
+        'Solicitud de modificación de gasto'
+      );
+
+      if (result.error) throw result.error;
+
+      return { 
+        expense: currentExpense, 
+        error: null, 
+        needsApproval: true,
+        requestId: result.requestId 
+      };
+    }
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { expense: null, error: null, needsApproval: false };
     console.error('Error actualizando gasto:', error);
-    return { expense: null, error };
+    return { expense: null, error, needsApproval: false };
   }
 };
 
 /**
- * Eliminar gasto
+ * Eliminar gasto - maneja amigos ficticios y reales
+ * Si es amigo ficticio (virtual): eliminación inmediata
+ * Si es amigo real: crea solicitud de cambio
  */
-export const deleteExpense = async (expenseId) => {
+export const deleteExpense = async (expenseId, friendType = 'virtual', friendId = null, userId = null) => {
   try {
-    // Primero eliminar cuotas relacionadas
-    await supabase
+    const { data: currentExpense, error: fetchError } = await supabase
       .from('expenses')
-      .delete()
-      .eq('parent_expense_id', expenseId);
+      .select('*')
+      .eq('id', expenseId)
+      .single();
 
-    // Luego eliminar el gasto principal
-    const { error } = await supabase
-      .from('expenses')
-      .delete()
-      .eq('id', expenseId);
+    if (fetchError) throw fetchError;
 
-    if (error) throw error;
-    return { error: null };
+    // Si es amigo virtual o no hay amigo involucrado, eliminar directamente
+    if (friendType === 'virtual' || !friendId) {
+      // Primero eliminar cuotas relacionadas
+      await supabase
+        .from('expenses')
+        .delete()
+        .eq('parent_expense_id', expenseId);
+
+      // Luego eliminar el gasto principal
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('id', expenseId);
+
+      if (error) throw error;
+      return { error: null, needsApproval: false };
+    } else {
+      // Es amigo real, crear change request
+      const changeRequestsService = (await import('./changeRequestsService')).default;
+      
+      const result = await changeRequestsService.createExpenseChangeRequest(
+        userId || currentExpense.user_id,
+        friendId,
+        expenseId,
+        'delete',
+        null,
+        'Solicitud de eliminación de gasto'
+      );
+
+      if (result.error) throw result.error;
+
+      return { 
+        error: null, 
+        needsApproval: true,
+        requestId: result.requestId 
+      };
+    }
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { error: null, needsApproval: false };
     console.error('Error eliminando gasto:', error);
-    return { error };
+    return { error, needsApproval: false };
   }
 };
 
@@ -279,6 +382,7 @@ export const getActiveInstallments = async (userId) => {
 
     return { installments: grouped, error: null };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { installments: {}, error: null };
     console.error('Error obteniendo cuotas:', error);
     return { installments: {}, error };
   }
@@ -312,6 +416,7 @@ export const getUpcomingPayments = async (userId) => {
       error: null 
     };
   } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { payments: [], totalDue: 0, count: 0, error: null };
     console.error('Error obteniendo próximos pagos:', error);
     return { payments: [], totalDue: 0, count: 0, error };
   }

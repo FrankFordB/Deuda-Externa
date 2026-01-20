@@ -4,8 +4,9 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth, useExpenses, useFriends, useUI } from '../../context';
-import { Button, Card, Input, Select, Modal, Loading, EmptyState } from '../../components';
+import { Button, Card, Input, Select, Modal, Loading, EmptyState, ExpenseEditModal, CurrencySelect, CURRENCIES, RecurringExpensesPanel } from '../../components';
 import virtualFriendsService from '../../services/virtualFriendsService';
+import { bankAccountsService } from '../../services';
 import styles from './Expenses.module.css';
 
 const Expenses = () => {
@@ -29,15 +30,21 @@ const Expenses = () => {
   const location = useLocation();
 
   const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   const [filterCategory, setFilterCategory] = useState('');
   const [filterPaid, setFilterPaid] = useState('');
+  const [activeTab, setActiveTab] = useState('expenses'); // 'expenses' | 'recurring'
   
   // Amigos virtuales
   const [virtualFriends, setVirtualFriends] = useState([]);
   const [showNewFriendModal, setShowNewFriendModal] = useState(false);
   const [newFriendType, setNewFriendType] = useState(null);
   const [newVirtualFriend, setNewVirtualFriend] = useState({ name: '', email: '', phone: '' });
+  
+  // Cuentas bancarias
+  const [bankAccounts, setBankAccounts] = useState([]);
   
   const [formData, setFormData] = useState({
     amount: '',
@@ -49,7 +56,10 @@ const Expenses = () => {
     date: new Date().toISOString().split('T')[0],
     isPaid: false,
     installments: 1,
-    customInstallments: ''
+    customInstallments: '',
+    currency: profile?.country || 'ARS',
+    currency_symbol: '$',
+    bank_account_id: ''
   });
 
   // Cargar amigos virtuales
@@ -62,6 +72,18 @@ const Expenses = () => {
       }
     };
     loadVirtualFriends();
+  }, [user]);
+
+  // Cargar cuentas bancarias
+  useEffect(() => {
+    const loadBankAccounts = async () => {
+      if (!user) return;
+      const result = await bankAccountsService.getUserAccounts(user.id);
+      if (!result.error) {
+        setBankAccounts(result.accounts || []);
+      }
+    };
+    loadBankAccounts();
   }, [user]);
 
   // Abrir modal si viene desde navegación
@@ -83,6 +105,17 @@ const Expenses = () => {
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  // Manejar cambio de moneda
+  const handleCurrencyChange = (e) => {
+    const currencyCode = e.target.value;
+    const selectedCurrency = CURRENCIES.find(c => c.value === currencyCode);
+    setFormData(prev => ({
+      ...prev,
+      currency: currencyCode,
+      currency_symbol: selectedCurrency?.symbol || '$'
     }));
   };
 
@@ -136,7 +169,10 @@ const Expenses = () => {
       friendType: formData.friendType,
       date: formData.date,
       isPaid: formData.isPaid,
-      installments
+      installments,
+      currency: formData.currency,
+      currency_symbol: formData.currency_symbol,
+      bank_account_id: formData.bank_account_id || null
     });
 
     setFormLoading(false);
@@ -161,7 +197,10 @@ const Expenses = () => {
       date: new Date().toISOString().split('T')[0],
       isPaid: false,
       installments: 1,
-      customInstallments: ''
+      customInstallments: '',
+      currency: profile?.country || 'ARS',
+      currency_symbol: '$',
+      bank_account_id: ''
     });
   };
 
@@ -185,6 +224,16 @@ const Expenses = () => {
     }
   };
 
+  const handleExpenseClick = (expense) => {
+    setSelectedExpense(expense);
+    setShowEditModal(true);
+  };
+
+  const handleEditSuccess = () => {
+    setShowEditModal(false);
+    setSelectedExpense(null);
+  };
+
   // Filtrar gastos
   const filteredExpenses = useMemo(() => {
     return expenses.filter(expense => {
@@ -205,18 +254,18 @@ const Expenses = () => {
   }, [formData.amount, formData.installments, formData.customInstallments]);
 
   const months = [
-    { value: 1, label: 'Enero' },
-    { value: 2, label: 'Febrero' },
-    { value: 3, label: 'Marzo' },
-    { value: 4, label: 'Abril' },
-    { value: 5, label: 'Mayo' },
-    { value: 6, label: 'Junio' },
-    { value: 7, label: 'Julio' },
-    { value: 8, label: 'Agosto' },
-    { value: 9, label: 'Septiembre' },
-    { value: 10, label: 'Octubre' },
-    { value: 11, label: 'Noviembre' },
-    { value: 12, label: 'Diciembre' }
+    { value: '1', label: 'Enero' },
+    { value: '2', label: 'Febrero' },
+    { value: '3', label: 'Marzo' },
+    { value: '4', label: 'Abril' },
+    { value: '5', label: 'Mayo' },
+    { value: '6', label: 'Junio' },
+    { value: '7', label: 'Julio' },
+    { value: '8', label: 'Agosto' },
+    { value: '9', label: 'Septiembre' },
+    { value: '10', label: 'Octubre' },
+    { value: '11', label: 'Noviembre' },
+    { value: '12', label: 'Diciembre' }
   ];
 
   if (loading) {
@@ -230,7 +279,11 @@ const Expenses = () => {
         <div className={styles.headerLeft}>
           <h2 className={styles.title}>Mis Gastos</h2>
           <p className={styles.subtitle}>
-            Total del mes: <strong>{formatCurrency(monthlyStats?.totalSpent || 0)}</strong>
+            {activeTab === 'expenses' ? (
+              <>Total del mes: <strong>{formatCurrency(monthlyStats?.totalSpent || 0)}</strong></>
+            ) : (
+              <>Administra tus gastos recurrentes</>
+            )}
           </p>
         </div>
         <Button icon="➕" onClick={() => setShowModal(true)}>
@@ -238,53 +291,80 @@ const Expenses = () => {
         </Button>
       </div>
 
-      {/* Filtros */}
-      <div className={styles.filters}>
-        <div className={styles.dateFilters}>
-          <Select
-            options={months}
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-            placeholder="Mes"
-          />
-          <Select
-            options={[
-              { value: 2024, label: '2024' },
-              { value: 2025, label: '2025' },
-              { value: 2026, label: '2026' }
-            ]}
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-            placeholder="Año"
-          />
-        </div>
-        <div className={styles.typeFilters}>
-          <Select
-            options={categories.map(c => ({ value: c.id, label: `${c.icon} ${c.label}` }))}
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-            placeholder="Todas las categorías"
-          />
-          <Select
-            options={[
-              { value: 'paid', label: '✅ Pagados' },
-              { value: 'pending', label: '⏳ Pendientes' }
-            ]}
-            value={filterPaid}
-            onChange={(e) => setFilterPaid(e.target.value)}
-            placeholder="Todos los estados"
-          />
-        </div>
+      {/* Tabs */}
+      <div className={styles.tabs}>
+        <button
+          className={`${styles.tab} ${activeTab === 'expenses' ? styles.active : ''}`}
+          onClick={() => setActiveTab('expenses')}
+        >
+          <span className={styles.tabIcon}>💳</span>
+          <span className={styles.tabLabel}>Gastos del Mes</span>
+        </button>
+        <button
+          className={`${styles.tab} ${activeTab === 'recurring' ? styles.active : ''}`}
+          onClick={() => setActiveTab('recurring')}
+        >
+          <span className={styles.tabIcon}>🔄</span>
+          <span className={styles.tabLabel}>Gastos Fijos</span>
+        </button>
       </div>
 
-      {/* Lista de gastos */}
-      {filteredExpenses.length > 0 ? (
-        <Card>
-          <div className={styles.expensesList}>
-            {filteredExpenses.map((expense) => {
-              const category = categories.find(c => c.id === expense.category);
-              return (
-                <div key={expense.id} className={styles.expenseItem}>
+      {/* Content */}
+      {activeTab === 'expenses' ? (
+        <>
+          {/* Filtros */}
+          <div className={styles.filters}>
+            <div className={styles.dateFilters}>
+              <Select
+                options={months}
+                value={String(selectedMonth)}
+                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                placeholder="Mes"
+              />
+              <Select
+                options={[
+                  { value: '2024', label: '2024' },
+                  { value: '2025', label: '2025' },
+                  { value: '2026', label: '2026' }
+                ]}
+                value={String(selectedYear)}
+                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                placeholder="Año"
+              />
+            </div>
+            <div className={styles.typeFilters}>
+              <Select
+                options={categories.map(c => ({ value: c.id, label: `${c.icon} ${c.label}` }))}
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                placeholder="Todas las categorías"
+              />
+              <Select
+                options={[
+                  { value: 'paid', label: '✅ Pagados' },
+                  { value: 'pending', label: '⏳ Pendientes' }
+                ]}
+                value={filterPaid}
+                onChange={(e) => setFilterPaid(e.target.value)}
+                placeholder="Todos los estados"
+              />
+            </div>
+          </div>
+
+          {/* Lista de gastos */}
+          {filteredExpenses.length > 0 ? (
+            <Card>
+              <div className={styles.expensesList}>
+                {filteredExpenses.map((expense) => {
+                  const category = categories.find(c => c.id === expense.category);
+                  return (
+                    <div 
+                      key={expense.id} 
+                      className={styles.expenseItem}
+                      onClick={() => handleExpenseClick(expense)}
+                      role="button"
+                      tabIndex={0}
+                >
                   <div className={styles.expenseIcon}>
                     {category?.icon || '📦'}
                   </div>
@@ -306,13 +386,16 @@ const Expenses = () => {
                   </div>
                   <div className={styles.expenseRight}>
                     <div className={styles.expenseAmount}>
-                      {formatCurrency(expense.amount)}
+                      {expense.currency_symbol || '$'}{expense.amount.toLocaleString('es-AR')}
                     </div>
                     <div className={styles.expenseActions}>
                       {!expense.is_paid && (
                         <button 
                           className={styles.actionBtn}
-                          onClick={() => handleMarkAsPaid(expense.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMarkAsPaid(expense.id);
+                          }}
                           title="Marcar como pagado"
                         >
                           ✓
@@ -320,7 +403,10 @@ const Expenses = () => {
                       )}
                       <button 
                         className={`${styles.actionBtn} ${styles.deleteBtn}`}
-                        onClick={() => handleDelete(expense.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(expense.id);
+                        }}
                         title="Eliminar"
                       >
                         🗑️
@@ -346,6 +432,10 @@ const Expenses = () => {
           />
         </Card>
       )}
+        </>
+      ) : (
+        <RecurringExpensesPanel userId={user?.id} bankAccounts={bankAccounts} />
+      )}
 
       {/* Modal de nuevo gasto */}
       <Modal
@@ -364,6 +454,29 @@ const Expenses = () => {
             onChange={handleChange}
             icon="💰"
             required
+          />
+
+          <CurrencySelect
+            label="Moneda"
+            value={formData.currency}
+            onChange={handleCurrencyChange}
+            required
+          />
+
+          <Select
+            label="Cuenta Bancaria"
+            name="bank_account_id"
+            options={[
+              { value: '', label: '-- Sin cuenta --' },
+              ...bankAccounts
+                .filter(acc => acc.currency === formData.currency)
+                .map(acc => ({
+                  value: acc.id,
+                  label: `${acc.currency_symbol} ${acc.name} (${acc.currency_symbol}${acc.current_balance})`
+                }))
+            ]}
+            value={formData.bank_account_id}
+            onChange={handleChange}
           />
 
           <Input
@@ -625,6 +738,19 @@ const Expenses = () => {
           )}
         </div>
       </Modal>
+
+      {/* Modal de edición de gasto */}
+      {selectedExpense && (
+        <ExpenseEditModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedExpense(null);
+          }}
+          expense={selectedExpense}
+          onSuccess={handleEditSuccess}
+        />
+      )}
     </div>
   );
 };

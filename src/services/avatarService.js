@@ -73,6 +73,10 @@ export const uploadAvatar = async (userId, file) => {
 
     return { url: avatarUrl, error: null };
   } catch (error) {
+    // Ignorar AbortError
+    if (error.name === 'AbortError' || error.message?.includes('AbortError') || error.message?.includes('signal is aborted')) {
+      return { url: null, error: null };
+    }
     console.error('Error subiendo avatar:', error);
     return { url: null, error };
   }

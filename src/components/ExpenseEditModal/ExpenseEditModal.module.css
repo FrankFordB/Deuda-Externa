@@ -1,0 +1,198 @@
+/**
+ * Expense Edit Modal Styles
+ */
+
+.modalContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  max-height: 75vh;
+  overflow-y: auto;
+}
+
+/* Expense Info */
+.expenseInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--primary-500);
+}
+
+.expenseHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.expenseIcon {
+  font-size: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.expenseDetails {
+  flex: 1;
+}
+
+.expenseDetails h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.expenseDetails p {
+  margin: 4px 0 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--primary-600);
+}
+
+.installmentBadge {
+  background: var(--primary-100);
+  color: var(--primary-700);
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.friendInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--border-color);
+}
+
+.friendLabel {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Pending Message */
+.pendingMessage {
+  display: flex;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg);
+  background: var(--warning-50);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--warning-200);
+}
+
+.pendingIcon {
+  font-size: 3rem;
+  flex-shrink: 0;
+}
+
+.pendingText h4 {
+  margin: 0 0 var(--spacing-sm);
+  font-size: 1.1rem;
+  color: var(--warning-700);
+}
+
+.pendingText p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--warning-600);
+  line-height: 1.5;
+}
+
+/* Form */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--gray-700);
+  padding: var(--spacing-sm);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.checkbox:hover {
+  background: var(--gray-100);
+}
+
+.checkbox input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--primary-500);
+  cursor: pointer;
+}
+
+/* Approval Warning */
+.approvalWarning {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--warning-50);
+  border: 1px solid var(--warning-200);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  color: var(--warning-700);
+}
+
+.warningIcon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+/* Form Actions */
+.formActions {
+  display: flex;
+  gap: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-color);
+  justify-content: space-between;
+}
+
+.rightActions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .expenseHeader {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .expenseIcon {
+    width: 50px;
+    height: 50px;
+    font-size: 2rem;
+  }
+
+  .formActions {
+    flex-direction: column;
+  }
+
+  .rightActions {
+    width: 100%;
+  }
+
+  .rightActions button {
+    flex: 1;
+  }
+}

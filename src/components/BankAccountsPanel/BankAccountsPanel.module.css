@@ -1,0 +1,122 @@
+.panel {
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.title {
+  font-size: var(--font-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.loading {
+  text-align: center;
+  padding: var(--spacing-xl);
+  color: var(--text-secondary);
+}
+
+.accountsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.empty {
+  text-align: center;
+  padding: var(--spacing-xl) var(--spacing-md);
+}
+
+.emptyIcon {
+  font-size: 48px;
+  margin-bottom: var(--spacing-sm);
+}
+
+.emptyText {
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-md);
+}
+
+.accountCard {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.accountCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary);
+}
+
+.accountHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.accountCurrency {
+  font-size: 20px;
+}
+
+.accountName {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.accountBalance {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.balanceLabel {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.balanceAmount {
+  font-size: var(--font-lg);
+  font-weight: 700;
+  color: var(--success);
+}
+
+.balanceAmount.negative {
+  color: var(--danger);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.modalActions {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+}
+
+.modalActions button {
+  flex: 1;
+}
+
+.hint {
+  font-size: var(--font-sm);
+  color: var(--warning);
+  text-align: center;
+  margin: 0;
+}
