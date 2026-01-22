@@ -1590,9 +1590,34 @@
 }
 
 @media (max-width: 480px) {
+  /* Página principal */
+  .shared-page {
+    padding: 8px;
+    max-width: 100vw;
+    overflow-x: hidden;
+    box-sizing: border-box;
+  }
+
+  .shared-header {
+    padding: 10px;
+    border-radius: 10px;
+    max-width: calc(100vw - 16px);
+    box-sizing: border-box;
+  }
+
+  .shared-title {
+    font-size: 1.1rem;
+  }
+
+  .shared-subtitle {
+    font-size: 0.75rem;
+  }
+
   .shared-btn-add {
     width: 100%;
     justify-content: center;
+    font-size: 0.8rem;
+    padding: 8px 12px;
   }
 
   .shared-payer-options,
@@ -1602,6 +1627,85 @@
 
   .shared-member-type-tabs {
     flex-direction: column;
+  }
+
+  /* Tabs */
+  .shared-tabs {
+    gap: 2px;
+    padding: 2px;
+    border-radius: 8px;
+    max-width: calc(100vw - 16px);
+    box-sizing: border-box;
+  }
+
+  .shared-tab {
+    padding: 6px 8px;
+    font-size: 0.7rem;
+    gap: 4px;
+  }
+
+  .shared-tab svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* Groups grid */
+  .shared-groups-grid {
+    gap: 8px;
+  }
+
+  .shared-group-card {
+    padding: 12px;
+    border-radius: 10px;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .shared-group-name {
+    font-size: 0.9rem;
+  }
+
+  .shared-group-meta {
+    font-size: 0.7rem;
+  }
+
+  /* Content card */
+  .shared-content-card {
+    border-radius: 10px;
+    max-width: calc(100vw - 16px);
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  /* Expense items */
+  .shared-expense-item {
+    padding: 10px;
+    gap: 8px;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .shared-expense-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+
+  .shared-expense-name {
+    font-size: 0.85rem;
+  }
+
+  .shared-expense-date {
+    font-size: 0.65rem;
+  }
+
+  .shared-expense-amount {
+    font-size: 0.9rem;
+  }
+
+  .shared-expense-status {
+    font-size: 0.6rem;
+    padding: 2px 6px;
   }
 }
 
@@ -3202,5 +3306,263 @@
 
   .shared-payment-summary-row strong {
     font-size: 1.1rem;
+  }
+
+  /* Modal responsive para 480px */
+  .shared-modal-overlay {
+    padding: 8px;
+  }
+
+  .shared-modal {
+    margin: 0;
+    max-width: calc(100vw - 16px) !important;
+    max-height: calc(100vh - 16px);
+    border-radius: 12px;
+  }
+
+  .shared-modal-lg {
+    max-width: calc(100vw - 16px) !important;
+  }
+
+  .shared-modal-header {
+    padding: 12px;
+  }
+
+  .shared-modal-header h2 {
+    font-size: 1rem;
+  }
+
+  .shared-modal-close {
+    width: 28px;
+    height: 28px;
+  }
+
+  .shared-modal-form {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  /* Expense Detail responsive */
+  .shared-expense-detail {
+    padding: 10px;
+  }
+
+  .shared-expense-detail-header {
+    gap: 10px;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .shared-expense-detail-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 1.25rem;
+  }
+
+  .shared-expense-detail-title {
+    width: 100%;
+  }
+
+  .shared-expense-detail-title h3 {
+    font-size: 1rem;
+  }
+
+  .shared-expense-detail-meta {
+    gap: 6px;
+    font-size: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .shared-expense-detail-total {
+    text-align: center;
+    width: 100%;
+    padding-top: 10px;
+    border-top: 1px dashed #e5e7eb;
+  }
+
+  .shared-expense-detail-amount {
+    font-size: 1.25rem;
+  }
+
+  .shared-expense-detail-label {
+    font-size: 0.65rem;
+  }
+
+  /* Sections */
+  .shared-expense-detail-section {
+    margin-bottom: 12px;
+  }
+
+  .shared-expense-detail-section h4 {
+    font-size: 0.8rem;
+    gap: 6px;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+  }
+
+  /* Payers */
+  .shared-expense-payer-item {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .shared-expense-payer-avatar {
+    width: 34px;
+    height: 34px;
+    font-size: 0.8rem;
+  }
+
+  .shared-expense-payer-name {
+    font-size: 0.85rem;
+  }
+
+  .shared-expense-payer-amount {
+    font-size: 0.95rem;
+  }
+
+  /* Splits */
+  .shared-expense-split-item {
+    padding: 10px;
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
+
+  .shared-expense-split-avatar {
+    width: 34px;
+    height: 34px;
+    font-size: 0.8rem;
+  }
+
+  .shared-expense-split-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .shared-expense-split-name {
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .shared-expense-split-status {
+    font-size: 0.65rem;
+  }
+
+  .shared-expense-split-amounts {
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .shared-expense-split-owed {
+    font-size: 0.9rem;
+  }
+
+  .shared-expense-split-pending {
+    font-size: 0.7rem;
+  }
+
+  /* Summary Card */
+  .shared-expense-summary-card {
+    padding: 12px;
+    gap: 10px;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .shared-expense-summary-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.1rem;
+  }
+
+  .shared-expense-summary-row {
+    padding: 6px 0;
+  }
+
+  .shared-expense-summary-row span {
+    font-size: 0.8rem;
+  }
+
+  .shared-expense-summary-row strong {
+    font-size: 0.95rem;
+  }
+
+  /* Notes */
+  .shared-expense-detail-notes {
+    padding: 10px;
+    margin-top: 12px;
+  }
+
+  .shared-expense-detail-notes p {
+    font-size: 0.8rem;
+  }
+
+  /* Modal Actions */
+  .shared-modal-actions {
+    padding-top: 10px;
+    margin-top: 10px;
+    gap: 8px;
+    flex-direction: column;
+  }
+
+  .shared-modal-actions button {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 16px;
+    font-size: 0.85rem;
+  }
+
+  /* Settle Confirm */
+  .shared-settle-confirm {
+    padding: 16px;
+  }
+
+  .shared-settle-confirm-icon {
+    width: 60px;
+    height: 60px;
+  }
+
+  .shared-settle-confirm h3 {
+    font-size: 1rem;
+  }
+
+  .shared-settle-confirm-text {
+    font-size: 0.85rem;
+  }
+
+  /* Status Badge */
+  .shared-expense-status-badge {
+    font-size: 0.65rem;
+    padding: 3px 8px;
+  }
+
+  /* Form elements in modal */
+  .shared-form-group label {
+    font-size: 0.8rem;
+  }
+
+  .shared-form-input,
+  .shared-form-select,
+  .shared-form-textarea {
+    font-size: 0.85rem;
+    padding: 8px 10px;
+  }
+
+  .shared-bank-option {
+    padding: 10px;
+  }
+
+  .shared-bank-option-info span {
+    font-size: 0.8rem;
+  }
+
+  .shared-bank-option-balance {
+    font-size: 0.85rem;
   }
 }
