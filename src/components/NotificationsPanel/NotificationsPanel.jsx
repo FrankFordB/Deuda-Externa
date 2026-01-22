@@ -2,7 +2,7 @@
  * NotificationsPanel - Panel de notificaciones con pestañas y alertas
  */
 import { useState, useRef, useEffect } from 'react';
-import { useNotifications, useExpenses } from '../../context';
+import { useNotifications, useExpenses, useDebts } from '../../context';
 import styles from './NotificationsPanel.module.css';
 
 const NotificationsPanel = () => {
@@ -17,6 +17,7 @@ const NotificationsPanel = () => {
   } = useNotifications();
   
   const { upcomingPayments: upcomingPaymentsData } = useExpenses();
+  const { markInstallmentAsPaid, refreshDebts } = useDebts();
   
   // Extraer el array de pagos del objeto
   const upcomingPayments = upcomingPaymentsData?.payments || [];
@@ -73,12 +74,28 @@ const NotificationsPanel = () => {
   };
 
   const handleConfirmPayment = async (notification, confirmed) => {
-    if (!notification.data?.confirmation_id) return;
-    
     setRespondingTo(notification.id);
+    
     try {
-      await respondPaymentConfirmation(notification.data.confirmation_id, confirmed);
-      await deleteNotification(notification.id);
+      // Si es una notificación de tipo payment_claim (nuevo sistema de cuotas)
+      if (notification.type === 'payment_claim' && notification.data?.installment_id) {
+        if (confirmed) {
+          // Marcar la cuota como pagada
+          const result = await markInstallmentAsPaid(notification.data.installment_id);
+          if (result.success) {
+            await deleteNotification(notification.id);
+            refreshDebts();
+          }
+        } else {
+          // Solo eliminar la notificación si rechaza
+          await deleteNotification(notification.id);
+        }
+      } 
+      // Sistema viejo con payment_confirmations
+      else if (notification.data?.confirmation_id) {
+        await respondPaymentConfirmation(notification.data.confirmation_id, confirmed);
+        await deleteNotification(notification.id);
+      }
     } finally {
       setRespondingTo(null);
     }
@@ -88,12 +105,18 @@ const NotificationsPanel = () => {
     switch (type) {
       case 'payment_confirmation':
         return '💰';
+      case 'payment_claim':
+        return '💵';
       case 'payment_response':
         return '✅';
       case 'friend_request':
         return '👥';
       case 'debt_request':
         return '💳';
+      case 'installment_paid':
+        return '✅';
+      case 'installment_reverted':
+        return '↩️';
       default:
         return '🔔';
     }
