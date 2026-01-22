@@ -3501,39 +3501,46 @@
     gap: 4px;
     max-width: 100%;
     overflow: hidden;
+    width: 100%;
+    box-sizing: border-box;
   }
 
-  .shared-expense-split-item {
-    padding: 6px;
+  .shared-expense-split-item,
+  .shared-expense-split-item.current-user,
+  .shared-expense-split-item.settled {
+    padding: 5px;
     gap: 4px;
     flex-wrap: nowrap;
     border-radius: 6px;
     border-left-width: 2px;
-    max-width: 100%;
-    width: 100%;
-    box-sizing: border-box;
-    overflow: hidden;
+    max-width: calc(100vw - 20px) !important;
+    width: calc(100vw - 20px) !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    display: flex;
+    align-items: center;
   }
 
   .shared-expense-split-avatar {
-    width: 24px;
-    height: 24px;
-    min-width: 24px;
-    font-size: 0.65rem;
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    max-width: 22px;
+    font-size: 0.6rem;
     flex-shrink: 0;
   }
 
   .shared-expense-split-info {
     flex: 1;
     min-width: 0;
-    overflow: hidden;
-    max-width: calc(100% - 90px);
+    overflow: hidden !important;
+    max-width: calc(100% - 85px);
   }
 
   .shared-expense-split-name {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     white-space: nowrap;
-    overflow: hidden;
+    overflow: hidden !important;
     text-overflow: ellipsis;
     display: block;
     max-width: 100%;
@@ -3543,11 +3550,14 @@
     width: 10px;
     height: 10px;
     flex-shrink: 0;
+    display: none;
   }
 
   .shared-expense-split-status {
-    font-size: 0.55rem;
+    font-size: 0.5rem;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .shared-expense-split-status svg {
@@ -3558,17 +3568,17 @@
   .shared-expense-split-amounts {
     text-align: right;
     flex-shrink: 0;
-    min-width: 55px;
-    max-width: 70px;
+    min-width: 50px;
+    max-width: 60px;
   }
 
   .shared-expense-split-owed {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     white-space: nowrap;
   }
 
   .shared-expense-split-pending {
-    font-size: 0.55rem;
+    font-size: 0.5rem;
     white-space: nowrap;
   }
 
