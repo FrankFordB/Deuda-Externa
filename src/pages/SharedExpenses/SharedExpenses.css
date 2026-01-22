@@ -3519,90 +3519,102 @@
     flex-shrink: 0;
   }
 
-  /* Splits más compactos */
+  /* Splits más compactos - Layout vertical para móvil */
   .shared-expense-detail-splits {
-    gap: 4px;
+    gap: 6px;
     max-width: 100%;
     overflow: hidden;
     width: 100%;
     box-sizing: border-box;
+    padding: 0 2px;
   }
 
   .shared-expense-split-item,
   .shared-expense-split-item.current-user,
   .shared-expense-split-item.settled {
-    padding: 5px;
-    gap: 4px;
-    flex-wrap: nowrap;
-    border-radius: 6px;
-    border-left-width: 2px;
-    max-width: calc(100vw - 20px) !important;
-    width: calc(100vw - 20px) !important;
+    padding: 8px;
+    gap: 6px;
+    flex-wrap: wrap;
+    border-radius: 8px;
+    border-left-width: 3px;
+    max-width: 100% !important;
+    width: 100% !important;
     box-sizing: border-box !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
+    flex-direction: row;
   }
 
+  /* Fila superior: avatar + nombre + status */
   .shared-expense-split-avatar {
-    width: 22px;
-    height: 22px;
-    min-width: 22px;
-    max-width: 22px;
-    font-size: 0.6rem;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    max-width: 28px;
+    font-size: 0.7rem;
     flex-shrink: 0;
   }
 
   .shared-expense-split-info {
     flex: 1;
     min-width: 0;
-    overflow: hidden !important;
-    max-width: calc(100% - 85px);
+    overflow: hidden;
   }
 
   .shared-expense-split-name {
-    font-size: 0.65rem;
-    white-space: nowrap;
-    overflow: hidden !important;
-    text-overflow: ellipsis;
-    display: block;
-    max-width: 100%;
-  }
-
-  .shared-expense-split-name svg {
-    width: 10px;
-    height: 10px;
-    flex-shrink: 0;
-    display: none;
-  }
-
-  .shared-expense-split-status {
-    font-size: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    display: block;
+    max-width: 100%;
+    color: #1f2937;
+  }
+
+  .shared-expense-split-name svg {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    display: inline;
+  }
+
+  .shared-expense-split-status {
+    font-size: 0.65rem;
+    white-space: nowrap;
+    margin-top: 2px;
   }
 
   .shared-expense-split-status svg {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
   }
 
+  /* Montos en su propia área, bien visibles */
   .shared-expense-split-amounts {
     text-align: right;
     flex-shrink: 0;
-    min-width: 50px;
-    max-width: 60px;
+    min-width: auto;
+    max-width: none;
+    margin-left: auto;
+    padding-left: 8px;
   }
 
   .shared-expense-split-owed {
-    font-size: 0.65rem;
+    font-size: 0.9rem;
+    font-weight: 700;
     white-space: nowrap;
+    color: #1f2937;
+    display: block;
   }
 
   .shared-expense-split-pending {
-    font-size: 0.5rem;
+    font-size: 0.7rem;
     white-space: nowrap;
+    color: #6b7280;
+    display: block;
+    margin-top: 2px;
   }
 
   /* Summary Card más compacto */
