@@ -4,6 +4,7 @@
 import { useMemo } from 'react';
 import { useExpenses, useUI } from '../../context';
 import { Card, Loading, EmptyState } from '../../components';
+import { AlertTriangle, CalendarDays, CheckCircle, RefreshCw } from 'lucide-react';
 import styles from './Installments.module.css';
 
 const Installments = () => {
@@ -111,7 +112,7 @@ const Installments = () => {
       {/* Summary Cards */}
       <div className={styles.summaryGrid}>
         <Card className={`${styles.summaryCard} ${summary.overdue > 0 ? styles.danger : ''}`}>
-          <div className={styles.summaryIcon}>⚠️</div>
+          <div className={styles.summaryIcon}><AlertTriangle size={24} /></div>
           <div className={styles.summaryContent}>
             <span className={styles.summaryLabel}>Vencidas / Próximas</span>
             <span className={styles.summaryValue}>
@@ -121,7 +122,7 @@ const Installments = () => {
           </div>
         </Card>
         <Card className={styles.summaryCard}>
-          <div className={styles.summaryIcon}>📅</div>
+          <div className={styles.summaryIcon}><CalendarDays size={24} /></div>
           <div className={styles.summaryContent}>
             <span className={styles.summaryLabel}>Próximos Meses</span>
             <span className={styles.summaryValue}>
@@ -131,7 +132,7 @@ const Installments = () => {
           </div>
         </Card>
         <Card className={styles.summaryCard}>
-          <div className={styles.summaryIcon}>✅</div>
+          <div className={styles.summaryIcon}><CheckCircle size={24} /></div>
           <div className={styles.summaryContent}>
             <span className={styles.summaryLabel}>Pagadas</span>
             <span className={styles.summaryValue}>

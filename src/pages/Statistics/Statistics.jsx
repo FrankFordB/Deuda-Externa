@@ -10,6 +10,18 @@ import {
 import { useExpenses, useDebts, useUI } from '../../context';
 import { Card, Select, Loading, EmptyState, InstallmentsModal, MonthlyExpensesModal } from '../../components';
 import { EXPENSE_CATEGORIES, PAYMENT_SOURCES } from '../../services/expensesService';
+import {
+  Wallet,
+  BarChart3,
+  TrendingUp,
+  Scale,
+  CalendarDays,
+  Tag,
+  Trophy,
+  CreditCard,
+  RefreshCw,
+  Lightbulb
+} from 'lucide-react';
 import styles from './Statistics.module.css';
 
 const COLORS = ['#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#14b8a6'];
@@ -224,7 +236,7 @@ const Statistics = () => {
       {/* Summary Cards */}
       <div className={styles.summaryGrid}>
         <Card className={styles.summaryCard}>
-          <div className={styles.summaryIcon}>💰</div>
+          <div className={styles.summaryIcon}><Wallet size={24} /></div>
           <div className={styles.summaryContent}>
             <span className={styles.summaryLabel}>
               {selectedMonth === 0 ? 'Total Anual' : 'Total del Mes'}
@@ -233,14 +245,14 @@ const Statistics = () => {
           </div>
         </Card>
         <Card className={styles.summaryCard}>
-          <div className={styles.summaryIcon}>📊</div>
+          <div className={styles.summaryIcon}><BarChart3 size={24} /></div>
           <div className={styles.summaryContent}>
             <span className={styles.summaryLabel}>Promedio Mensual</span>
             <span className={styles.summaryValue}>{formatCurrency(monthlyAverage)}</span>
           </div>
         </Card>
         <Card className={styles.summaryCard}>
-          <div className={styles.summaryIcon}>📈</div>
+          <div className={styles.summaryIcon}><TrendingUp size={24} /></div>
           <div className={styles.summaryContent}>
             <span className={styles.summaryLabel}>Mes Pico</span>
             <span className={styles.summaryValue}>
@@ -249,7 +261,7 @@ const Statistics = () => {
           </div>
         </Card>
         <Card className={styles.summaryCard}>
-          <div className={styles.summaryIcon}>⚖️</div>
+          <div className={styles.summaryIcon}><Scale size={24} /></div>
           <div className={styles.summaryContent}>
             <span className={styles.summaryLabel}>Balance Deudas</span>
             <span className={`${styles.summaryValue} ${(summary.owed - summary.owe) >= 0 ? styles.positive : styles.negative}`}>
@@ -265,7 +277,7 @@ const Statistics = () => {
         <div className={styles.chartsGrid}>
           {/* Gráfico de gastos mensuales */}
           <Card className={styles.chartCard}>
-            <h3 className={styles.chartTitle}>📅 Gastos Mensuales {selectedYear}</h3>
+            <h3 className={styles.chartTitle}><CalendarDays size={20} /> Gastos Mensuales {selectedYear}</h3>
             {monthlyData.some(m => m.total > 0) ? (
               <div className={styles.chartContainer}>
                 <ResponsiveContainer width="100%" height={300}>
@@ -298,11 +310,11 @@ const Statistics = () => {
                     />
                   </AreaChart>
                 </ResponsiveContainer>
-                <p className={styles.chartHint}>💡 Haz click en un mes para ver detalles</p>
+                <p className={styles.chartHint}><Lightbulb size={16} /> Haz click en un mes para ver detalles</p>
               </div>
             ) : (
               <EmptyState
-                icon="📊"
+                icon={<BarChart3 size={48} />}
                 title="Sin datos"
                 description="No hay gastos registrados para este año"
               />
@@ -311,7 +323,7 @@ const Statistics = () => {
 
           {/* Gráfico por categoría */}
           <Card className={styles.chartCard}>
-            <h3 className={styles.chartTitle}>🏷️ Por Categoría</h3>
+            <h3 className={styles.chartTitle}><Tag size={20} /> Por Categoría</h3>
             {categoryStats.length > 0 ? (
               <div className={styles.chartContainer}>
                 <ResponsiveContainer width="100%" height={300}>
@@ -338,13 +350,13 @@ const Statistics = () => {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <EmptyState icon="🏷️" title="Sin datos" description="No hay categorías" />
+              <EmptyState icon={<Tag size={48} />} title="Sin datos" description="No hay categorías" />
             )}
           </Card>
 
           {/* Top Categorías */}
           <Card className={styles.chartCard}>
-            <h3 className={styles.chartTitle}>🏆 Top Categorías</h3>
+            <h3 className={styles.chartTitle}><Trophy size={20} /> Top Categorías</h3>
             {categoryStats.length > 0 ? (
               <div className={styles.topList}>
                 {categoryStats.slice(0, 5).map((cat, index) => (
@@ -367,13 +379,13 @@ const Statistics = () => {
                 ))}
               </div>
             ) : (
-              <EmptyState icon="🏆" title="Sin datos" />
+              <EmptyState icon={<Trophy size={48} />} title="Sin datos" />
             )}
           </Card>
 
           {/* Por fuente de pago */}
           <Card className={styles.chartCard}>
-            <h3 className={styles.chartTitle}>💳 Por Fuente de Pago</h3>
+            <h3 className={styles.chartTitle}><CreditCard size={20} /> Por Fuente de Pago</h3>
             {sourceStats.length > 0 ? (
               <div className={styles.chartContainer}>
                 <ResponsiveContainer width="100%" height={300}>
@@ -390,14 +402,14 @@ const Statistics = () => {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <EmptyState icon="💳" title="Sin datos" description="No hay gastos" />
+              <EmptyState icon={<CreditCard size={48} />} title="Sin datos" description="No hay gastos" />
             )}
           </Card>
 
           {/* Panel de Cuotas */}
           {installmentExpenses.length > 0 && (
             <Card className={`${styles.chartCard} ${styles.installmentsCard}`}>
-              <h3 className={styles.chartTitle}>🔄 Gastos en Cuotas</h3>
+              <h3 className={styles.chartTitle}><RefreshCw size={20} /> Gastos en Cuotas</h3>
               <div className={styles.installmentsList}>
                 {installmentExpenses.slice(0, 5).map((exp) => (
                   <div 

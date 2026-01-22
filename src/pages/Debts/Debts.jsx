@@ -1390,7 +1390,7 @@ const Debts = () => {
                   className="debts-friend-type-btn"
                   onClick={() => setNewFriendType('real')}
                 >
-                  <span className="debts-friend-type-icon">👤</span>
+                  <span className="debts-friend-type-icon"><UserPlus size={24} /></span>
                   <span className="debts-friend-type-label">Amigo Real</span>
                   <span className="debts-friend-type-desc">Buscar por nickname de usuario</span>
                 </button>

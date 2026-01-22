@@ -7,6 +7,14 @@ import { useAuth, useExpenses, useFriends, useUI } from '../../context';
 import { Button, Card, Input, Select, Modal, Loading, EmptyState, ExpenseEditModal, CurrencySelect, CURRENCIES, RecurringExpensesPanel } from '../../components';
 import virtualFriendsService from '../../services/virtualFriendsService';
 import { bankAccountsService } from '../../services';
+import {
+  Plus,
+  CreditCard,
+  RefreshCw,
+  Wallet,
+  UserCircle,
+  Ghost
+} from 'lucide-react';
 import styles from './Expenses.module.css';
 
 const Expenses = () => {
@@ -287,7 +295,7 @@ const Expenses = () => {
           </p>
         </div>
         {activeTab === 'expenses' && (
-          <Button icon="➕" onClick={() => setShowModal(true)}>
+          <Button icon={<Plus size={18} />} onClick={() => setShowModal(true)}>
             Nuevo Gasto
           </Button>
         )}
@@ -299,14 +307,14 @@ const Expenses = () => {
           className={`${styles.tab} ${activeTab === 'expenses' ? styles.active : ''}`}
           onClick={() => setActiveTab('expenses')}
         >
-          <span className={styles.tabIcon}>💳</span>
+          <span className={styles.tabIcon}><CreditCard size={18} /></span>
           <span className={styles.tabLabel}>Gastos del Mes</span>
         </button>
         <button
           className={`${styles.tab} ${activeTab === 'recurring' ? styles.active : ''}`}
           onClick={() => setActiveTab('recurring')}
         >
-          <span className={styles.tabIcon}>🔄</span>
+          <span className={styles.tabIcon}><RefreshCw size={18} /></span>
           <span className={styles.tabLabel}>Gastos Fijos</span>
         </button>
       </div>
@@ -660,7 +668,7 @@ const Expenses = () => {
                   className={styles.friendTypeBtn}
                   onClick={() => setNewFriendType('virtual')}
                 >
-                  <span className={styles.friendTypeIcon}>📇</span>
+                  <span className={styles.friendTypeIcon}><Ghost size={24} /></span>
                   <span className={styles.friendTypeLabel}>Contacto Ficticio</span>
                   <span className={styles.friendTypeDesc}>Para personas sin cuenta en la app</span>
                 </button>
@@ -669,7 +677,7 @@ const Expenses = () => {
                   className={styles.friendTypeBtn}
                   onClick={() => setNewFriendType('real')}
                 >
-                  <span className={styles.friendTypeIcon}>👤</span>
+                  <span className={styles.friendTypeIcon}><UserCircle size={24} /></span>
                   <span className={styles.friendTypeLabel}>Amigo Real</span>
                   <span className={styles.friendTypeDesc}>Buscar por nickname de usuario</span>
                 </button>

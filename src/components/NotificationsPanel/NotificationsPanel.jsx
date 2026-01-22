@@ -4,6 +4,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNotifications, useExpenses, useDebts, useAuth } from '../../context';
 import { markInstallmentAsPaid } from '../../services/debtsService';
+import { Coins, Banknote, CheckCircle, Users, CreditCard, Undo2, Bell } from 'lucide-react';
 import styles from './NotificationsPanel.module.css';
 
 const NotificationsPanel = () => {
@@ -106,21 +107,21 @@ const NotificationsPanel = () => {
   const getNotificationIcon = (type) => {
     switch (type) {
       case 'payment_confirmation':
-        return '💰';
+        return <Coins size={18} />;
       case 'payment_claim':
-        return '💵';
+        return <Banknote size={18} />;
       case 'payment_response':
-        return '✅';
+        return <CheckCircle size={18} />;
       case 'friend_request':
-        return '👥';
+        return <Users size={18} />;
       case 'debt_request':
-        return '💳';
+        return <CreditCard size={18} />;
       case 'installment_paid':
-        return '✅';
+        return <CheckCircle size={18} />;
       case 'installment_reverted':
-        return '↩️';
+        return <Undo2 size={18} />;
       default:
-        return '🔔';
+        return <Bell size={18} />;
     }
   };
 

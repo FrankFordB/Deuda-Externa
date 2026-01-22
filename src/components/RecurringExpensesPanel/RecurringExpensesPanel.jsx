@@ -2,7 +2,46 @@ import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { recurringExpensesService } from '../../services';
 import { RecurringExpenseForm, Button, Card, Modal } from '../';
+import {
+  AlertTriangle,
+  X,
+  CreditCard,
+  RefreshCw,
+  Plus,
+  Wallet,
+  CalendarDays,
+  Pencil,
+  Inbox,
+  Dumbbell,
+  Tv,
+  Shield,
+  Home,
+  Lightbulb,
+  GraduationCap,
+  Heart,
+  Car,
+  Pin
+} from 'lucide-react';
 import styles from './RecurringExpensesPanel.module.css';
+
+// Mapeo de categorías a íconos
+const CATEGORY_ICONS = {
+  gym: Dumbbell,
+  sports: Dumbbell,
+  subscriptions: Tv,
+  insurance: Shield,
+  rent: Home,
+  utilities: Lightbulb,
+  education: GraduationCap,
+  health: Heart,
+  transport: Car,
+  default: Pin
+};
+
+const getCategoryIcon = (category) => {
+  const IconComponent = CATEGORY_ICONS[category] || CATEGORY_ICONS.default;
+  return <IconComponent size={20} />;
+};
 
 const RecurringExpensesPanel = ({ userId, bankAccounts }) => {
   const [recurringExpenses, setRecurringExpenses] = useState([]);
@@ -137,28 +176,28 @@ const RecurringExpensesPanel = ({ userId, bankAccounts }) => {
       {/* Error Message */}
       {error && (
         <div className={styles.errorBanner}>
-          <span className={styles.errorIcon}>⚠️</span>
+          <span className={styles.errorIcon}><AlertTriangle size={18} /></span>
           <span>{error}</span>
           <button 
             className={styles.errorClose}
             onClick={() => setError(null)}
           >
-            ✕
+            <X size={16} />
           </button>
         </div>
       )}
       
       <div className={styles.header}>
         <div className={styles.titleSection}>
-          <h2 className={styles.title}>💳 Gastos Recurrentes</h2>
+          <h2 className={styles.title}><CreditCard size={24} /> Gastos Recurrentes</h2>
           <p className={styles.subtitle}>Gastos automáticos mensuales</p>
         </div>
         <div className={styles.actions}>
           <Button variant="secondary" onClick={handleGenerate} disabled={generating}>
-            {generating ? '⏳ Generando...' : '🔄 Generar Ahora'}
+            <RefreshCw size={16} /> {generating ? 'Generando...' : 'Generar Ahora'}
           </Button>
           <Button variant="primary" onClick={() => setShowForm(true)}>
-            + Nuevo Gasto Fijo
+            <Plus size={16} /> Nuevo Gasto Fijo
           </Button>
         </div>
       </div>
@@ -166,21 +205,21 @@ const RecurringExpensesPanel = ({ userId, bankAccounts }) => {
       {stats && (
         <div className={styles.statsGrid}>
           <Card variant="gradient" className={styles.statCard}>
-            <div className={styles.statIcon}>💰</div>
+            <div className={styles.statIcon}><Wallet size={24} /></div>
             <div className={styles.statContent}>
               <div className={styles.statLabel}>Total Mensual</div>
               <div className={styles.statValue}>{formatCurrency(stats.totalMonthly, 'USD')}</div>
             </div>
           </Card>
           <Card variant="success" className={styles.statCard}>
-            <div className={styles.statIcon}>📅</div>
+            <div className={styles.statIcon}><CalendarDays size={24} /></div>
             <div className={styles.statContent}>
               <div className={styles.statLabel}>Total Anual</div>
               <div className={styles.statValue}>{formatCurrency(stats.totalYearly, 'USD')}</div>
             </div>
           </Card>
           <Card variant="warning" className={styles.statCard}>
-            <div className={styles.statIcon}>🔄</div>
+            <div className={styles.statIcon}><RefreshCw size={24} /></div>
             <div className={styles.statContent}>
               <div className={styles.statLabel}>Gastos Activos</div>
               <div className={styles.statValue}>{stats.activeCount}</div>
@@ -196,7 +235,7 @@ const RecurringExpensesPanel = ({ userId, bankAccounts }) => {
             setShowForm(false);
             setEditingExpense(null);
           }}
-          title={editingExpense ? '✏️ Editar Gasto Fijo' : '➕ Nuevo Gasto Fijo'}
+          title={editingExpense ? <><Pencil size={18} /> Editar Gasto Fijo</> : <><Plus size={18} /> Nuevo Gasto Fijo</>}
           size="md"
         >
           <RecurringExpenseForm
@@ -220,11 +259,11 @@ const RecurringExpensesPanel = ({ userId, bankAccounts }) => {
       <div className={styles.list}>
         {recurringExpenses.length === 0 ? (
           <div className={styles.empty}>
-            <div className={styles.emptyIcon}>📭</div>
+            <div className={styles.emptyIcon}><Inbox size={48} /></div>
             <h3>No hay gastos recurrentes</h3>
             <p>Crea tu primer gasto fijo como gym, streaming, etc.</p>
             <Button variant="primary" onClick={() => setShowForm(true)}>
-              + Crear Primer Gasto
+              <Plus size={16} /> Crear Primer Gasto
             </Button>
           </div>
         ) : (
@@ -236,7 +275,7 @@ const RecurringExpensesPanel = ({ userId, bankAccounts }) => {
               >
                 <div className={styles.cardHeader}>
                   <div className={styles.cardTitle}>
-                    <span className={styles.categoryIcon}>{expense.category === 'gym' ? '🏋️' : expense.category === 'sports' ? '⚽' : expense.category === 'subscriptions' ? '📺' : expense.category === 'insurance' ? '🛡️' : expense.category === 'rent' ? '🏠' : expense.category === 'utilities' ? '💡' : expense.category === 'education' ? '📚' : expense.category === 'health' ? '⚕️' : expense.category === 'transport' ? '🚗' : '📌'}</span>
+                    <span className={styles.categoryIcon}>{getCategoryIcon(expense.category)}</span>
                     <div>
                       <h4>{expense.name}</h4>
                       {expense.description && (

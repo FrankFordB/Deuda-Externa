@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { useAuth, useUI } from '../../context';
 import { Button, Card, Input } from '../../components';
+import { Lock, KeyRound, Check, Circle } from 'lucide-react';
 import styles from './Settings.module.css';
 
 // Validaciones de contraseña
@@ -168,7 +169,7 @@ const Settings = () => {
                 onBlur={() => handleBlur('currentPassword')}
                 placeholder="Tu contraseña actual"
                 required
-                icon="🔐"
+                icon={<Lock size={18} />}
               />
               
               <div className={styles.passwordInputGroup}>
@@ -181,7 +182,7 @@ const Settings = () => {
                   onBlur={() => handleBlur('newPassword')}
                   placeholder="Mínimo 8 caracteres"
                   required
-                  icon="🔑"
+                  icon={<KeyRound size={18} />}
                   error={touched.newPassword && passwordErrors.length > 0}
                 />
 
@@ -211,13 +212,13 @@ const Settings = () => {
                 {touched.newPassword && passwordData.newPassword && (
                   <div className={styles.requirements}>
                     <div className={`${styles.requirement} ${passwordData.newPassword.length >= 8 ? styles.valid : styles.invalid}`}>
-                      {passwordData.newPassword.length >= 8 ? '✓' : '○'} Mínimo 8 caracteres
+                      {passwordData.newPassword.length >= 8 ? <Check size={14} /> : <Circle size={14} />} Mínimo 8 caracteres
                     </div>
                     <div className={`${styles.requirement} ${PASSWORD_RULES.hasUppercase.test(passwordData.newPassword) ? styles.valid : styles.invalid}`}>
-                      {PASSWORD_RULES.hasUppercase.test(passwordData.newPassword) ? '✓' : '○'} Una mayúscula
+                      {PASSWORD_RULES.hasUppercase.test(passwordData.newPassword) ? <Check size={14} /> : <Circle size={14} />} Una mayúscula
                     </div>
                     <div className={`${styles.requirement} ${PASSWORD_RULES.hasNumber.test(passwordData.newPassword) ? styles.valid : styles.invalid}`}>
-                      {PASSWORD_RULES.hasNumber.test(passwordData.newPassword) ? '✓' : '○'} Un número
+                      {PASSWORD_RULES.hasNumber.test(passwordData.newPassword) ? <Check size={14} /> : <Circle size={14} />} Un número
                     </div>
                   </div>
                 )}
@@ -232,9 +233,10 @@ const Settings = () => {
                 onBlur={() => handleBlur('confirmPassword')}
                 placeholder="Repite la nueva contraseña"
                 required
-                icon="🔐"
+                icon={<Lock size={18} />}
                 error={touched.confirmPassword && !passwordsMatch && passwordData.confirmPassword}
                 hint={touched.confirmPassword && !passwordsMatch && passwordData.confirmPassword ? 'Las contraseñas no coinciden' : ''}
+              />
               />
               <div className={styles.formActions}>
                 <Button 

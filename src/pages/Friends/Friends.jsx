@@ -346,7 +346,7 @@ const Friends = () => {
             </div>
           ) : (
             <div className="friends-empty">
-              <div className="friends-empty-icon">👥</div>
+              <div className="friends-empty-icon"><Users size={48} /></div>
               <h3 className="friends-empty-title">Sin amigos</h3>
               <p className="friends-empty-text">Agrega amigos reales o ficticios para empezar a organizar tus deudas</p>
               <button className="friends-empty-action" onClick={() => openModal('search')}>
@@ -401,7 +401,7 @@ const Friends = () => {
             </div>
           ) : (
             <div className="friends-empty">
-              <div className="friends-empty-icon">👥</div>
+              <div className="friends-empty-icon"><Users size={48} /></div>
               <h3 className="friends-empty-title">Sin amigos reales</h3>
               <p className="friends-empty-text">Agrega amigos usando su nickname para compartir gastos y deudas</p>
               <button className="friends-empty-action" onClick={() => openModal('search')}>
@@ -458,7 +458,7 @@ const Friends = () => {
             </div>
           ) : (
             <div className="friends-empty">
-              <div className="friends-empty-icon">👤</div>
+              <div className="friends-empty-icon"><UserCircle size={48} /></div>
               <h3 className="friends-empty-title">Sin contactos personales</h3>
               <p className="friends-empty-text">Agrega personas que no usan la app para organizar tus deudas con ellos</p>
               <button className="friends-empty-action" onClick={() => openModal('virtual')}>

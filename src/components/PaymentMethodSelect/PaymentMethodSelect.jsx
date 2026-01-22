@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth, useUI } from '../../context';
 import { Select, Button, Modal, Input } from '../';
+import { Plus } from 'lucide-react';
 import paymentMethodsService from '../../services/paymentMethodsService';
 import styles from './PaymentMethodSelect.module.css';
 
@@ -87,7 +88,7 @@ const PaymentMethodSelect = ({ value, onChange, label = 'Método de Pago', requi
           type="button"
           size="sm"
           variant="secondary"
-          icon="+"
+          icon={<Plus size={16} />}
           onClick={() => setShowModal(true)}
           className={styles.addButton}
           title="Agregar nuevo método"

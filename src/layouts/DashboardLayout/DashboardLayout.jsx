@@ -6,6 +6,29 @@ import { Outlet, NavLink, Navigate, useLocation } from 'react-router-dom';
 import { useAuth, useUI, useFriends, useDebts, useNotifications } from '../../context';
 import { NotificationsPanel } from '../../components';
 import remindersService from '../../services/remindersService';
+import {
+  LayoutDashboard,
+  Wallet,
+  CreditCard,
+  Users,
+  Handshake,
+  BarChart3,
+  RefreshCw,
+  CalendarDays,
+  CalendarClock,
+  UserCircle,
+  Settings,
+  ShieldCheck,
+  UsersRound,
+  Wrench,
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
+  Menu,
+  X,
+  Bell,
+  Gem
+} from 'lucide-react';
 import styles from './DashboardLayout.module.css';
 
 const DashboardLayout = () => {
@@ -72,27 +95,27 @@ const DashboardLayout = () => {
     { 
       section: 'Principal',
       items: [
-        { path: '/dashboard', label: 'Dashboard', icon: '📊' },
-        { path: '/expenses', label: 'Gastos', icon: '💰' },
-        { path: '/debts', label: 'Deudas', icon: '💳', badge: debtRequestCount },
-        { path: '/friends', label: 'Amigos', icon: '👥', badge: friendRequestCount },
-        { path: '/shared-expenses', label: 'Gastos Compartidos', icon: '🤝' },
+        { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { path: '/expenses', label: 'Gastos', icon: Wallet },
+        { path: '/debts', label: 'Deudas', icon: CreditCard, badge: debtRequestCount },
+        { path: '/friends', label: 'Amigos', icon: Users, badge: friendRequestCount },
+        { path: '/shared-expenses', label: 'Gastos Compartidos', icon: Handshake },
       ]
     },
     {
       section: 'Análisis',
       items: [
-        { path: '/statistics', label: 'Estadísticas', icon: '📈' },
-        { path: '/installments', label: 'Cuotas', icon: '🔄' },
-        { path: '/monthly-stats', label: 'Resumen Mensual', icon: '📅' },
-        { path: '/due-dates', label: 'Vencimientos', icon: '📅', badge: upcomingDueCount },
+        { path: '/statistics', label: 'Estadísticas', icon: BarChart3 },
+        { path: '/installments', label: 'Cuotas', icon: RefreshCw },
+        { path: '/monthly-stats', label: 'Resumen Mensual', icon: CalendarDays },
+        { path: '/due-dates', label: 'Vencimientos', icon: CalendarClock, badge: upcomingDueCount },
       ]
     },
     {
       section: 'Cuenta',
       items: [
-        { path: '/profile', label: 'Mi Perfil', icon: '👤' },
-        { path: '/settings', label: 'Configuración', icon: '⚙️' },
+        { path: '/profile', label: 'Mi Perfil', icon: UserCircle },
+        { path: '/settings', label: 'Configuración', icon: Settings },
       ]
     }
   ];
@@ -102,9 +125,9 @@ const DashboardLayout = () => {
     navItems.push({
       section: 'Administración',
       items: [
-        { path: '/admin', label: 'Panel Admin', icon: '🔐' },
-        { path: '/admin/users', label: 'Usuarios', icon: '👥' },
-        { path: '/admin/config', label: 'Configuración', icon: '🛠️' },
+        { path: '/admin', label: 'Panel Admin', icon: ShieldCheck },
+        { path: '/admin/users', label: 'Usuarios', icon: UsersRound },
+        { path: '/admin/config', label: 'Configuración', icon: Wrench },
       ]
     });
   }
@@ -134,7 +157,7 @@ const DashboardLayout = () => {
       <aside className={`${styles.sidebar} ${sidebarCollapsed ? styles.collapsed : ''} ${mobileMenuOpen ? styles.mobileOpen : ''}`}>
         <div className={styles.sidebarHeader}>
           <div className={styles.logo}>
-            <span className={styles.logoIcon}>💎</span>
+            <Gem size={24} className={styles.logoIcon} />
             <span className={styles.logoText}>{siteConfig.header_title}</span>
           </div>
           <button 
@@ -142,7 +165,7 @@ const DashboardLayout = () => {
             onClick={toggleSidebar}
             title={sidebarCollapsed ? 'Expandir' : 'Contraer'}
           >
-            {sidebarCollapsed ? '→' : '←'}
+            {sidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
           </button>
         </div>
 
@@ -150,22 +173,27 @@ const DashboardLayout = () => {
           {navItems.map((section) => (
             <div key={section.section} className={styles.navSection}>
               <div className={styles.navSectionTitle}>{section.section}</div>
-              {section.items.map((item) => (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  className={({ isActive }) => 
-                    `${styles.navLink} ${isActive ? styles.active : ''}`
-                  }
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <span className={styles.navIcon}>{item.icon}</span>
-                  <span className={styles.navText}>{item.label}</span>
-                  {item.badge > 0 && (
-                    <span className={styles.navBadge}>{item.badge}</span>
-                  )}
-                </NavLink>
-              ))}
+              {section.items.map((item) => {
+                const IconComponent = item.icon;
+                return (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    className={({ isActive }) => 
+                      `${styles.navLink} ${isActive ? styles.active : ''}`
+                    }
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <span className={styles.navIcon}>
+                      <IconComponent size={20} />
+                    </span>
+                    <span className={styles.navText}>{item.label}</span>
+                    {item.badge > 0 && (
+                      <span className={styles.navBadge}>{item.badge}</span>
+                    )}
+                  </NavLink>
+                );
+              })}
             </div>
           ))}
         </nav>
@@ -176,7 +204,7 @@ const DashboardLayout = () => {
             onClick={handleSignOut}
             style={{ width: '100%' }}
           >
-            <span className={styles.navIcon}>🚪</span>
+            <span className={styles.navIcon}><LogOut size={20} /></span>
             <span className={styles.navText}>Cerrar Sesión</span>
           </button>
         </div>
@@ -199,7 +227,7 @@ const DashboardLayout = () => {
               className={`${styles.headerBtn} ${styles.mobileMenuBtn}`}
               onClick={() => setMobileMenuOpen(true)}
             >
-              ☰
+              <Menu size={24} />
             </button>
             <h1 className={styles.pageTitle}>{getPageTitle()}</h1>
           </div>
@@ -236,21 +264,21 @@ const DashboardLayout = () => {
                     className="dropdown-item"
                     onClick={() => setUserMenuOpen(false)}
                   >
-                    👤 Mi Perfil
+                    <UserCircle size={16} /> Mi Perfil
                   </NavLink>
                   <NavLink 
                     to="/settings" 
                     className="dropdown-item"
                     onClick={() => setUserMenuOpen(false)}
                   >
-                    ⚙️ Configuración
+                    <Settings size={16} /> Configuración
                   </NavLink>
                   <div className="dropdown-divider"></div>
                   <button 
                     className="dropdown-item"
                     onClick={handleSignOut}
                   >
-                    🚪 Cerrar Sesión
+                    <LogOut size={16} /> Cerrar Sesión
                   </button>
                 </div>
               )}

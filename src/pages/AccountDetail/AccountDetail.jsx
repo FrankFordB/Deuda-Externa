@@ -8,6 +8,29 @@ import { bankAccountsService } from '../../services';
 import { deleteExpense } from '../../services/expensesService';
 import { supabase } from '../../services/supabase';
 import { Card, Button, Select, StatCard, Loading, EmptyState, EditAccountModal, Modal, CURRENCIES } from '../../components';
+import { 
+  ArrowLeft, 
+  Pencil, 
+  Banknote, 
+  Landmark, 
+  ArrowDownRight, 
+  CreditCard, 
+  CheckCircle, 
+  Clock, 
+  ClipboardList,
+  BarChart3,
+  Wallet,
+  Inbox,
+  Package,
+  Calendar,
+  User,
+  Contact,
+  RefreshCw,
+  AlertTriangle,
+  Zap,
+  Trash2,
+  Coins
+} from 'lucide-react';
 import styles from './AccountDetail.module.css';
 
 const MONTHS = [
@@ -288,7 +311,7 @@ const AccountDetail = () => {
         <Button 
           variant="ghost" 
           onClick={() => navigate('/dashboard')}
-          icon="←"
+          icon={<ArrowLeft size={18} />}
         >
           Volver
         </Button>
@@ -306,7 +329,7 @@ const AccountDetail = () => {
 
         <Button
           onClick={() => setShowEditModal(true)}
-          icon="✏️"
+          icon={<Pencil size={18} />}
         >
           Editar
         </Button>
@@ -340,56 +363,56 @@ const AccountDetail = () => {
       {/* Estadísticas del mes */}
       {stats && (
         <>
-          <h2 className={styles.sectionTitle}>💰 Balance General</h2>
+          <h2 className={styles.sectionTitle}><Wallet size={20} /> Balance General</h2>
           <div className={styles.statsGrid}>
             <StatCard
-              icon="💵"
+              icon={<Banknote size={24} />}
               label="Balance Actual"
               value={`${stats.currencySymbol}${stats.currentBalance.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`}
               variant={stats.currentBalance >= 0 ? 'success' : 'danger'}
             />
             <StatCard
-              icon="🏦"
+              icon={<Landmark size={24} />}
               label="Balance Inicial"
               value={`${stats.currencySymbol}${stats.initialBalance.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`}
               variant="default"
             />
             <StatCard
-              icon="💸"
+              icon={<ArrowDownRight size={24} />}
               label="Total Gastado (mes)"
               value={`${stats.currencySymbol}${stats.totalExpenses.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`}
               variant="warning"
             />
             <StatCard
-              icon="💳"
+              icon={<CreditCard size={24} />}
               label="Deudas (todas)"
               value={`${stats.currencySymbol}${stats.totalDebtsAll.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`}
               variant="danger"
             />
           </div>
 
-          <h2 className={styles.sectionTitle}>📊 Estadísticas de {MONTHS[selectedMonth - 1]} {selectedYear}</h2>
+          <h2 className={styles.sectionTitle}><BarChart3 size={20} /> Estadísticas de {MONTHS[selectedMonth - 1]} {selectedYear}</h2>
           <div className={styles.statsGrid}>
             <StatCard
-              icon="✅"
+              icon={<CheckCircle size={24} />}
               label="Gastos Pagados"
               value={`${stats.currencySymbol}${stats.paidExpenses.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`}
               variant="success"
             />
             <StatCard
-              icon="⏳"
+              icon={<Clock size={24} />}
               label="Gastos Pendientes"
               value={`${stats.currencySymbol}${stats.pendingExpenses.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`}
               variant="info"
             />
             <StatCard
-              icon="💳"
+              icon={<CreditCard size={24} />}
               label="Deudas del Mes"
               value={`${stats.currencySymbol}${stats.totalDebtsMonth.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`}
               variant="warning"
             />
             <StatCard
-              icon="📋"
+              icon={<ClipboardList size={24} />}
               label="Cantidad"
               value={`${stats.expenseCount} gastos + ${stats.debtCountMonth} deudas`}
               variant="default"
@@ -406,19 +429,19 @@ const AccountDetail = () => {
             className={`${styles.tab} ${activeTab === 'expenses' ? styles.active : ''}`}
             onClick={() => setActiveTab('expenses')}
           >
-            💸 Gastos Personales ({expenses.length})
+            <ArrowDownRight size={16} /> Gastos Personales ({expenses.length})
           </button>
           <button
             className={`${styles.tab} ${activeTab === 'debts' ? styles.active : ''}`}
             onClick={() => setActiveTab('debts')}
           >
-            💳 Yo Debo ({debts.filter(d => d.status !== 'paid' && d.status !== 'rejected').length})
+            <CreditCard size={16} /> Yo Debo ({debts.filter(d => d.status !== 'paid' && d.status !== 'rejected').length})
           </button>
           <button
             className={`${styles.tab} ${activeTab === 'owed' ? styles.active : ''}`}
             onClick={() => setActiveTab('owed')}
           >
-            💰 Me Deben ({debtsOwed.filter(d => d.status !== 'paid' && d.status !== 'rejected').length})
+            <Coins size={16} /> Me Deben ({debtsOwed.filter(d => d.status !== 'paid' && d.status !== 'rejected').length})
           </button>
         </div>
 
@@ -427,7 +450,7 @@ const AccountDetail = () => {
           <div className={styles.tabContent}>
             {expenses.length === 0 ? (
               <EmptyState
-                icon="📭"
+                icon={<Inbox size={48} />}
                 title="Sin gastos"
                 description={`No hay gastos personales registrados en ${MONTHS[selectedMonth - 1]}`}
               />
@@ -437,12 +460,12 @@ const AccountDetail = () => {
                   <div key={expense.id} className={styles.item}>
                     <div className={styles.itemLeft}>
                       <span className={styles.itemIcon}>
-                        {expense.category || '📦'}
+                        {expense.category || <Package size={20} />}
                       </span>
                       <div>
                         <div className={styles.itemTitle}>{expense.description}</div>
                         <div className={styles.itemMeta}>
-                          📅 {formatDate(expense.date)}
+                          <Calendar size={12} /> {formatDate(expense.date)}
                           {expense.payment_method && ` • ${expense.payment_method}`}
                         </div>
                       </div>
@@ -453,14 +476,14 @@ const AccountDetail = () => {
                       </div>
                       <div className={styles.itemActions}>
                         <span className={`${styles.statusBadge} ${expense.is_paid ? styles.paid : styles.pending}`}>
-                          {expense.is_paid ? '✅ Pagado' : '⏳ Pendiente'}
+                          {expense.is_paid ? <><CheckCircle size={14} /> Pagado</> : <><Clock size={14} /> Pendiente</>}
                         </span>
                         <button 
                           className={styles.deleteBtn}
                           onClick={() => handleDeleteExpense(expense)}
                           title="Eliminar gasto"
                         >
-                          🗑️
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </div>
@@ -476,7 +499,7 @@ const AccountDetail = () => {
           <div className={styles.tabContent}>
             {debts.length === 0 ? (
               <EmptyState
-                icon="✅"
+                icon={<CheckCircle size={48} />}
                 title="Sin deudas"
                 description="No tienes deudas asociadas a esta cuenta"
               />
@@ -494,7 +517,7 @@ const AccountDetail = () => {
                     <div key={debt.id} className={`${styles.item} ${overdue ? styles.overdue : ''}`}>
                       <div className={styles.itemLeft}>
                         <span className={styles.itemIcon}>
-                          {debt.virtual_friend ? '📇' : '👤'}
+                          {debt.virtual_friend ? <Contact size={20} /> : <User size={20} />}
                         </span>
                         <div>
                           <div className={styles.itemTitle}>
@@ -503,11 +526,11 @@ const AccountDetail = () => {
                           <div className={styles.itemDesc}>{debt.description}</div>
                           <div className={styles.itemMeta}>
                             {debt.installments > 1 && (
-                              <span className={styles.badge}>🔄 {debt.installments} cuotas</span>
+                              <span className={styles.badge}><RefreshCw size={12} /> {debt.installments} cuotas</span>
                             )}
                             {debt.due_date && (
                               <span className={`${styles.badge} ${overdue ? styles.badgeOverdue : ''}`}>
-                                {overdue ? '⚠️ Vencida' : daysUntil === 0 ? '⚡ Vence hoy' : daysUntil > 0 ? `📅 ${daysUntil} días` : `📅 ${formatDate(debt.due_date)}`}
+                                {overdue ? <><AlertTriangle size={12} /> Vencida</> : daysUntil === 0 ? <><Zap size={12} /> Vence hoy</> : daysUntil > 0 ? <><Calendar size={12} /> {daysUntil} días</> : <><Calendar size={12} /> {formatDate(debt.due_date)}</>}
                               </span>
                             )}
                           </div>
@@ -534,7 +557,7 @@ const AccountDetail = () => {
           <div className={styles.tabContent}>
             {debtsOwed.length === 0 ? (
               <EmptyState
-                icon="💰"
+                icon={<Coins size={48} />}
                 title="Nadie te debe"
                 description="No tienes deudas a cobrar en esta moneda"
               />
@@ -552,7 +575,7 @@ const AccountDetail = () => {
                     <div key={debt.id} className={`${styles.item} ${overdue ? styles.overdue : ''}`}>
                       <div className={styles.itemLeft}>
                         <span className={styles.itemIcon}>
-                          {debt.virtual_friend ? '📇' : '👤'}
+                          {debt.virtual_friend ? <Contact size={20} /> : <User size={20} />}
                         </span>
                         <div>
                           <div className={styles.itemTitle}>
@@ -561,11 +584,11 @@ const AccountDetail = () => {
                           <div className={styles.itemDesc}>{debt.description}</div>
                           <div className={styles.itemMeta}>
                             {debt.installments > 1 && (
-                              <span className={styles.badge}>🔄 {debt.installments} cuotas</span>
+                              <span className={styles.badge}><RefreshCw size={12} /> {debt.installments} cuotas</span>
                             )}
                             {debt.due_date && (
                               <span className={`${styles.badge} ${overdue ? styles.badgeOverdue : ''}`}>
-                                {overdue ? '⚠️ Cobrar' : daysUntil === 0 ? '⚡ Vence hoy' : daysUntil > 0 ? `📅 ${daysUntil} días` : `📅 ${formatDate(debt.due_date)}`}
+                                {overdue ? <><AlertTriangle size={12} /> Cobrar</> : daysUntil === 0 ? <><Zap size={12} /> Vence hoy</> : daysUntil > 0 ? <><Calendar size={12} /> {daysUntil} días</> : <><Calendar size={12} /> {formatDate(debt.due_date)}</>}
                               </span>
                             )}
                           </div>
@@ -586,7 +609,7 @@ const AccountDetail = () => {
                                 variant="info"
                                 onClick={() => handleCollect(debt)}
                               >
-                                💰 Cobrar
+                                <Coins size={14} /> Cobrar
                               </Button>
                             )}
                           </div>

@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth, useUI } from '../../context';
 import { Button, Input } from '../../components';
+import { Rocket, Lock, Check, Circle } from 'lucide-react';
 import styles from '../Login/Login.module.css';
 import resetStyles from './ResetPassword.module.css';
 
@@ -195,7 +196,7 @@ const ResetPassword = () => {
           </div>
 
           <Link to="/login">
-            <Button fullWidth icon="🚀">
+            <Button fullWidth icon={<Rocket size={18} />}>
               Ir a iniciar sesión
             </Button>
           </Link>
@@ -208,7 +209,7 @@ const ResetPassword = () => {
   return (
     <div className={styles.loginCard}>
       <div className={styles.header}>
-        <div className={styles.logo}>🔒</div>
+        <div className={styles.logo}><Lock size={32} /></div>
         <h1 className={styles.title}>Nueva contraseña</h1>
         <p className={styles.subtitle}>
           Crea una contraseña segura para tu cuenta
@@ -228,7 +229,7 @@ const ResetPassword = () => {
               placeholder="Mínimo 8 caracteres"
               required
               autoFocus
-              icon="🔐"
+              icon={<Lock size={18} />}
               error={touched.password && passwordErrors.length > 0}
             />
 
@@ -258,13 +259,13 @@ const ResetPassword = () => {
             {touched.password && formData.password && (
               <div className={resetStyles.requirements}>
                 <div className={`${resetStyles.requirement} ${formData.password.length >= 8 ? resetStyles.valid : resetStyles.invalid}`}>
-                  {formData.password.length >= 8 ? '✓' : '○'} Mínimo 8 caracteres
+                  {formData.password.length >= 8 ? <Check size={14} /> : <Circle size={14} />} Mínimo 8 caracteres
                 </div>
                 <div className={`${resetStyles.requirement} ${PASSWORD_RULES.hasUppercase.test(formData.password) ? resetStyles.valid : resetStyles.invalid}`}>
-                  {PASSWORD_RULES.hasUppercase.test(formData.password) ? '✓' : '○'} Una mayúscula
+                  {PASSWORD_RULES.hasUppercase.test(formData.password) ? <Check size={14} /> : <Circle size={14} />} Una mayúscula
                 </div>
                 <div className={`${resetStyles.requirement} ${PASSWORD_RULES.hasNumber.test(formData.password) ? resetStyles.valid : resetStyles.invalid}`}>
-                  {PASSWORD_RULES.hasNumber.test(formData.password) ? '✓' : '○'} Un número
+                  {PASSWORD_RULES.hasNumber.test(formData.password) ? <Check size={14} /> : <Circle size={14} />} Un número
                 </div>
               </div>
             )}
@@ -279,7 +280,7 @@ const ResetPassword = () => {
             onBlur={() => handleBlur('confirmPassword')}
             placeholder="Repite la contraseña"
             required
-            icon="🔐"
+            icon={<Lock size={18} />}
             error={touched.confirmPassword && !passwordsMatch && formData.confirmPassword}
             hint={touched.confirmPassword && !passwordsMatch && formData.confirmPassword ? 'Las contraseñas no coinciden' : ''}
           />

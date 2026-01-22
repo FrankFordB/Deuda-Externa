@@ -8,6 +8,24 @@ import { useAuth, useExpenses, useDebts, useFriends, useUI } from '../../context
 import { StatCard, Card, Button, Loading, EmptyState, Modal, Input, Select, CurrencyTabs, BankAccountsPanel, InstallmentsPanel, MonthSelectorModal, RequiredBankAccountModal, CURRENCIES } from '../../components';
 import remindersService from '../../services/remindersService';
 import monthlyIncomeService from '../../services/monthlyIncomeService';
+import {
+  Plus,
+  BarChart3,
+  CalendarDays,
+  Banknote,
+  Wallet,
+  Receipt,
+  ClipboardList,
+  Clock,
+  TrendingDown,
+  TrendingUp,
+  CheckCircle,
+  Package,
+  Users,
+  Pencil,
+  Bell,
+  Lightbulb
+} from 'lucide-react';
 import styles from './Dashboard.module.css';
 
 const COLORS = ['#0ea5e9', '#8b5cf6', '#22c55e', '#f59e0b', '#ef4444', '#ec4899', '#6366f1', '#14b8a6'];
@@ -305,7 +323,7 @@ const Dashboard = () => {
               ))}
             </Select>
           </div>
-          <Button icon="➕" onClick={() => navigate('/expenses', { state: { openNew: true } })}>
+          <Button icon={<Plus size={18} />} onClick={() => navigate('/expenses', { state: { openNew: true } })}>
             Nuevo Gasto
           </Button>
         </div>
@@ -328,7 +346,7 @@ const Dashboard = () => {
         <Card className={styles.monthSelectorCard}>
           <div className={styles.cardHeader}>
             <h3 className={styles.cardTitle}>
-              <span className={styles.cardIcon}>📊</span>
+              <span className={styles.cardIcon}><BarChart3 size={20} /></span>
               Gastos por Mes
             </h3>
           </div>
@@ -340,7 +358,7 @@ const Dashboard = () => {
             variant="primary"
             fullWidth
           >
-            📅 Ver Gastos por Mes
+            <CalendarDays size={18} /> Ver Gastos por Mes
           </Button>
         </Card>
       </div>
@@ -351,7 +369,7 @@ const Dashboard = () => {
           <div className={styles.salaryContent}>
             <div className={styles.salaryInfo}>
               <div className={styles.salaryHeader}>
-                <span className={styles.salaryIcon}>💵</span>
+                <span className={styles.salaryIcon}><Banknote size={24} /></span>
                 <div>
                   <h3 className={styles.salaryTitle}>Sueldo de {getMonthName(selectedMonth)}</h3>
                   <p className={styles.salaryValue}>
@@ -381,11 +399,11 @@ const Dashboard = () => {
             <div className={styles.salaryStatus}>
               {monthlySalary > 0 ? (
                 <div className={`${styles.statusBadge} ${alcanza ? styles.ok : styles.warning}`}>
-                  {alcanza ? '✅ Te alcanza' : '⚠️ No te alcanza'}
+                  {alcanza ? <><CheckCircle size={16} /> Te alcanza</> : <><Clock size={16} /> No te alcanza</>}
                 </div>
               ) : null}
               <Button size="sm" variant="secondary" onClick={openSalaryModal}>
-                {monthlySalary > 0 ? '✏️ Editar' : '➕ Configurar'}
+                {monthlySalary > 0 ? <><Pencil size={14} /> Editar</> : <><Plus size={14} /> Configurar</>}
               </Button>
             </div>
           </div>
@@ -395,25 +413,25 @@ const Dashboard = () => {
       {/* Stats principales */}
       <div className={styles.statsGrid}>
         <StatCard
-          icon="💰"
+          icon={<Wallet size={24} />}
           label="Ingresos Mensuales"
           value={formatCurrencyValue(monthlyStats?.income || 0)}
           variant="primary"
         />
         <StatCard
-          icon="💸"
+          icon={<Receipt size={24} />}
           label="Total Gastado"
           value={formatCurrencyValue(totalGastos)}
           variant="warning"
         />
         <StatCard
-          icon="📊"
+          icon={<BarChart3 size={24} />}
           label="Balance"
           value={formatCurrencyValue(monthlyStats?.balance || 0)}
           variant={monthlyStats?.balance >= 0 ? 'success' : 'default'}
         />
         <StatCard
-          icon="📋"
+          icon={<ClipboardList size={24} />}
           label="Gastos Pendientes"
           value={formatCurrencyValue(filteredExpenseStats?.totalPending || 0)}
           variant="info"
@@ -425,13 +443,13 @@ const Dashboard = () => {
         <div className={styles.alertsSection}>
           <Card className={styles.alertCard}>
             <div className={styles.alertHeader}>
-              <span className={styles.alertIcon}>⏰</span>
+              <span className={styles.alertIcon}><Clock size={20} /></span>
               <h3 className={styles.alertTitle}>Próximos Vencimientos</h3>
             </div>
             <div className={styles.alertsList}>
               {upcomingDueDates.debtsIOwe.map(debt => (
                 <div key={debt.id} className={`${styles.alertItem} ${styles.alertWarning}`}>
-                  <span className={styles.alertEmoji}>💸</span>
+                  <span className={styles.alertEmoji}><TrendingDown size={18} /></span>
                   <div className={styles.alertInfo}>
                     <span className={styles.alertText}>
                       Debes pagar <strong>{debt.currency_symbol || '$'}{debt.amount.toLocaleString('es-AR')}</strong> a {debt.creditor?.first_name || 'Alguien'}
@@ -444,7 +462,7 @@ const Dashboard = () => {
               ))}
               {upcomingDueDates.debtsOwedToMe.map(debt => (
                 <div key={debt.id} className={`${styles.alertItem} ${styles.alertSuccess}`}>
-                  <span className={styles.alertEmoji}>💰</span>
+                  <span className={styles.alertEmoji}><TrendingUp size={18} /></span>
                   <div className={styles.alertInfo}>
                     <span className={styles.alertText}>
                       {debt.debtor_type === 'virtual' 
@@ -475,7 +493,7 @@ const Dashboard = () => {
                   <div key={payment.id} className={styles.paymentItem}>
                     <div className={styles.paymentInfo}>
                       <span className={styles.paymentCategory}>
-                        {categories.find(c => c.id === payment.category)?.icon || '📦'}
+                        {categories.find(c => c.id === payment.category)?.icon || <Package size={18} />}
                       </span>
                       <div>
                         <div className={styles.paymentDesc}>{payment.description}</div>
@@ -497,7 +515,7 @@ const Dashboard = () => {
               </div>
             ) : (
               <EmptyState
-                icon="✅"
+                icon={<CheckCircle size={48} />}
                 title="Sin pagos pendientes"
                 description="No tienes pagos pendientes este mes"
               />
@@ -543,7 +561,7 @@ const Dashboard = () => {
               </div>
             ) : (
               <EmptyState
-                icon="📊"
+                icon={<BarChart3 size={48} />}
                 title="Sin datos"
                 description="Aún no hay gastos registrados este mes"
               />
@@ -579,7 +597,7 @@ const Dashboard = () => {
             
             {(debtsSummary?.pendingToAccept > 0) && (
               <div className={styles.debtAlert}>
-                🔔 Tienes {debtsSummary.pendingToAccept} deuda(s) pendiente(s) de aceptar
+                <Bell size={16} /> Tienes {debtsSummary.pendingToAccept} deuda(s) pendiente(s) de aceptar
                 <Link to="/debts">Ver →</Link>
               </div>
             )}
@@ -610,7 +628,7 @@ const Dashboard = () => {
               </div>
             ) : (
               <EmptyState
-                icon="👥"
+                icon={<Users size={48} />}
                 title="Sin deudas"
                 description="No tienes deudas con amigos"
               />
@@ -637,7 +655,7 @@ const Dashboard = () => {
               </div>
             ) : (
               <EmptyState
-                icon="👥"
+                icon={<Users size={48} />}
                 title="Sin amigos"
                 description="Agrega amigos usando su nickname"
                 action="Agregar amigo"
@@ -698,11 +716,11 @@ const Dashboard = () => {
             placeholder="Ej: 500000"
             value={salaryInput}
             onChange={(e) => setSalaryInput(e.target.value)}
-            icon="💵"
+            icon={<Banknote size={18} />}
           />
           
           <div className={styles.salaryFormHint2}>
-            💡 Los sueldos se suman automáticamente en tus ingresos totales
+            <Lightbulb size={16} /> Los sueldos se suman automáticamente en tus ingresos totales
           </div>
           
           <div className={styles.salaryFormActions}>
