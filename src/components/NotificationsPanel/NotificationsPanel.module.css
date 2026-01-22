@@ -307,12 +307,12 @@
 }
 
 .actionBtn.confirm {
-  background: var(--success);
-  color: white;
+  background: #10b981 !important;
+  color: white !important;
 }
 
 .actionBtn.confirm:hover:not(:disabled) {
-  background: #059669;
+  background: #059669 !important;
 }
 
 .actionBtn.reject {
