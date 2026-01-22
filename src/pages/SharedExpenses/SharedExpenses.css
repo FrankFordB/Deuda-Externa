@@ -3308,26 +3308,32 @@
     font-size: 1.1rem;
   }
 
-  /* Modal responsive para 480px */
+  /* Modal responsive para 480px - MÁS ESTRICTO */
   .shared-modal-overlay {
-    padding: 4px;
+    padding: 2px;
     align-items: flex-start;
-    padding-top: 10px;
+    padding-top: 5px;
   }
 
   .shared-modal {
     margin: 0 auto;
-    width: calc(100vw - 8px) !important;
-    max-width: calc(100vw - 8px) !important;
-    max-height: calc(100vh - 20px);
-    border-radius: 10px;
+    width: calc(100vw - 4px) !important;
+    max-width: calc(100vw - 4px) !important;
+    max-height: calc(100vh - 10px);
+    border-radius: 8px;
     overflow-y: auto;
     overflow-x: hidden;
+    box-sizing: border-box;
+  }
+
+  .shared-modal * {
+    box-sizing: border-box;
+    max-width: 100%;
   }
 
   .shared-modal-lg {
-    width: calc(100vw - 8px) !important;
-    max-width: calc(100vw - 8px) !important;
+    width: calc(100vw - 4px) !important;
+    max-width: calc(100vw - 4px) !important;
   }
 
   .shared-modal-header {
@@ -3340,200 +3346,252 @@
   }
 
   .shared-modal-header h2 {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
   }
 
   .shared-modal-close {
-    width: 26px;
-    height: 26px;
+    width: 24px;
+    height: 24px;
+  }
+
+  .shared-modal-close svg {
+    width: 16px;
+    height: 16px;
   }
 
   .shared-modal-form {
-    padding: 10px;
-    gap: 8px;
+    padding: 8px;
+    gap: 6px;
   }
 
-  /* Expense Detail responsive */
+  /* Expense Detail responsive - MÁS COMPACTO */
   .shared-expense-detail {
-    padding: 8px;
+    padding: 6px;
     overflow-x: hidden;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .shared-expense-detail-header {
-    gap: 8px;
-    padding-bottom: 8px;
-    margin-bottom: 8px;
+    gap: 6px;
+    padding-bottom: 6px;
+    margin-bottom: 6px;
     flex-direction: column;
     align-items: center;
     text-align: center;
   }
 
   .shared-expense-detail-icon {
-    width: 44px;
-    height: 44px;
-    font-size: 1.1rem;
-    border-radius: 10px;
+    width: 36px;
+    height: 36px;
+    font-size: 0.9rem;
+    border-radius: 8px;
   }
 
   .shared-expense-detail-icon svg {
-    width: 22px;
-    height: 22px;
+    width: 18px;
+    height: 18px;
   }
 
   .shared-expense-detail-title {
     width: 100%;
+    max-width: 100%;
+    overflow: hidden;
   }
 
   .shared-expense-detail-title h3 {
-    font-size: 0.9rem;
-    margin-bottom: 6px;
+    font-size: 0.85rem;
+    margin-bottom: 4px;
     word-break: break-word;
+    line-height: 1.2;
   }
 
   .shared-expense-detail-meta {
-    gap: 4px;
-    font-size: 0.7rem;
+    gap: 3px;
+    font-size: 0.6rem;
     justify-content: center;
     flex-wrap: wrap;
+    max-width: 100%;
   }
 
   .shared-expense-detail-meta span {
-    padding: 2px 6px;
+    padding: 2px 4px;
     background: #f3f4f6;
-    border-radius: 4px;
+    border-radius: 3px;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100vw - 40px);
+    gap: 2px;
+  }
+
+  .shared-expense-detail-meta span svg {
+    width: 10px;
+    height: 10px;
   }
 
   .shared-expense-detail-total {
     text-align: center;
     width: 100%;
-    padding-top: 8px;
+    padding-top: 6px;
     border-top: 1px dashed #e5e7eb;
   }
 
   .shared-expense-detail-amount {
-    font-size: 1.1rem;
+    font-size: 1rem;
   }
 
   .shared-expense-detail-label {
-    font-size: 0.6rem;
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
   }
 
   /* Sections */
   .shared-expense-detail-section {
-    margin-bottom: 10px;
+    margin-bottom: 8px;
   }
 
   .shared-expense-detail-section h4 {
-    font-size: 0.75rem;
-    gap: 4px;
-    margin-bottom: 6px;
-    padding-bottom: 4px;
+    font-size: 0.7rem;
+    gap: 3px;
+    margin-bottom: 4px;
+    padding-bottom: 3px;
   }
 
   .shared-expense-detail-section h4 svg {
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
   }
 
-  /* Payers */
+  /* Payers List */
+  .shared-expense-detail-payers {
+    gap: 4px;
+  }
+
   .shared-expense-payer-item {
-    padding: 8px;
-    gap: 8px;
-    border-radius: 8px;
+    padding: 6px;
+    gap: 6px;
+    border-radius: 6px;
   }
 
   .shared-expense-payer-avatar {
-    width: 30px;
-    height: 30px;
-    font-size: 0.75rem;
+    width: 26px;
+    height: 26px;
+    font-size: 0.65rem;
   }
 
   .shared-expense-payer-name {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 90px;
   }
 
   .shared-expense-payer-amount {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
+    flex-shrink: 0;
   }
 
-  /* Splits */
+  /* Splits más compactos */
   .shared-expense-detail-splits {
-    gap: 6px;
+    gap: 4px;
+    max-width: 100%;
+    overflow: hidden;
   }
 
   .shared-expense-split-item {
-    padding: 8px;
-    gap: 6px;
+    padding: 6px;
+    gap: 4px;
     flex-wrap: nowrap;
-    border-radius: 8px;
+    border-radius: 6px;
     border-left-width: 2px;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
   }
 
   .shared-expense-split-avatar {
-    width: 30px;
-    height: 30px;
-    font-size: 0.75rem;
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    font-size: 0.65rem;
+    flex-shrink: 0;
   }
 
   .shared-expense-split-info {
     flex: 1;
     min-width: 0;
+    overflow: hidden;
+    max-width: calc(100% - 90px);
   }
 
   .shared-expense-split-name {
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    display: block;
+    max-width: 100%;
   }
 
   .shared-expense-split-name svg {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
+    flex-shrink: 0;
   }
 
   .shared-expense-split-status {
-    font-size: 0.6rem;
+    font-size: 0.55rem;
+    white-space: nowrap;
   }
 
   .shared-expense-split-status svg {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
   }
 
   .shared-expense-split-amounts {
     text-align: right;
     flex-shrink: 0;
+    min-width: 55px;
+    max-width: 70px;
   }
 
   .shared-expense-split-owed {
-    font-size: 0.8rem;
+    font-size: 0.7rem;
+    white-space: nowrap;
   }
 
   .shared-expense-split-pending {
-    font-size: 0.65rem;
+    font-size: 0.55rem;
+    white-space: nowrap;
   }
 
-  /* Summary Card */
+  /* Summary Card más compacto */
   .shared-expense-summary-card {
-    padding: 10px;
-    gap: 8px;
+    padding: 8px;
+    gap: 6px;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    border-radius: 10px;
-  }
-
-  .shared-expense-summary-icon {
-    width: 36px;
-    height: 36px;
-    font-size: 1rem;
     border-radius: 8px;
   }
 
+  .shared-expense-summary-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+    border-radius: 6px;
+  }
+
   .shared-expense-summary-icon svg {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
   }
 
   .shared-expense-summary-content {
@@ -3541,41 +3599,43 @@
   }
 
   .shared-expense-summary-row {
-    padding: 4px 0;
+    padding: 3px 0;
     flex-direction: column;
-    gap: 2px;
+    gap: 1px;
     text-align: center;
   }
 
   .shared-expense-summary-row span {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
   }
 
   .shared-expense-summary-row strong {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
   }
 
   /* Notes */
   .shared-expense-detail-notes {
-    padding: 8px;
-    margin-top: 8px;
-    border-radius: 8px;
+    padding: 6px;
+    margin-top: 6px;
+    border-radius: 6px;
   }
 
   .shared-expense-detail-notes h4 {
-    font-size: 0.75rem;
-    margin-bottom: 4px;
+    font-size: 0.7rem;
+    margin-bottom: 3px;
   }
 
   .shared-expense-detail-notes p {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
+    line-height: 1.3;
+    word-break: break-word;
   }
 
-  /* Modal Actions */
+  /* Modal Actions más compacto */
   .shared-modal-actions {
-    padding: 8px;
-    margin-top: 8px;
-    gap: 6px;
+    padding: 6px;
+    margin-top: 6px;
+    gap: 4px;
     flex-direction: column;
     position: sticky;
     bottom: 0;
@@ -3586,14 +3646,19 @@
   .shared-modal-actions button {
     width: 100%;
     justify-content: center;
-    padding: 8px 12px;
-    font-size: 0.8rem;
-    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    border-radius: 6px;
+  }
+
+  .shared-modal-actions button svg {
+    width: 14px;
+    height: 14px;
   }
 
   /* Settle Confirm */
   .shared-settle-confirm {
-    padding: 12px;
+    padding: 10px;
   }
 
   .shared-settle-confirm-icon {
