@@ -135,6 +135,7 @@ export const getAllDebtNotificationsCount = async (userId) => {
 
 /**
  * Crear notificación
+ * Intenta usar RPC, si falla usa insert directo
  */
 export const createNotification = async ({
   userId,
@@ -146,6 +147,7 @@ export const createNotification = async ({
   actionType = null
 }) => {
   try {
+    // Primero intentar insert directo (más simple)
     const { data: notification, error } = await supabase
       .from('notifications')
       .insert({
@@ -155,12 +157,35 @@ export const createNotification = async ({
         message,
         data,
         action_required: actionRequired,
-        action_type: actionType
+        action_type: actionType,
+        read: false
       })
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      // Si falla el insert directo, intentar con RPC
+      console.log('Insert directo falló, intentando RPC...', error.message);
+      
+      const { data: notificationId, error: rpcError } = await supabase
+        .rpc('create_notification', {
+          p_user_id: userId,
+          p_type: type,
+          p_title: title,
+          p_message: message,
+          p_data: data,
+          p_action_required: actionRequired,
+          p_action_type: actionType
+        });
+
+      if (rpcError) {
+        console.error('RPC también falló:', rpcError);
+        throw error; // Lanzar el error original
+      }
+      
+      return { notification: { id: notificationId }, error: null };
+    }
+
     return { notification, error: null };
   } catch (error) {
     console.error('Error creando notificación:', error);
@@ -225,10 +250,35 @@ export const deleteNotification = async (notificationId) => {
 
 /**
  * Suscribirse a notificaciones en tiempo real
- * DESHABILITADO para evitar loops
+ * Retorna una función para cancelar la suscripción
  */
 export const subscribeToNotifications = (userId, onNotification) => {
-  return () => {};
+  if (!userId || !onNotification) return () => {};
+  
+  const channel = supabase
+    .channel(`notifications-${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${userId}`
+      },
+      (payload) => {
+        console.log('🔔 Realtime notification:', payload.eventType, payload);
+        onNotification(payload);
+      }
+    )
+    .subscribe((status) => {
+      console.log('📡 Notifications subscription status:', status);
+    });
+
+  // Retornar función de cleanup
+  return () => {
+    console.log('🔕 Unsubscribing from notifications');
+    supabase.removeChannel(channel);
+  };
 };
 
 // ========== PAYMENT CONFIRMATIONS ==========

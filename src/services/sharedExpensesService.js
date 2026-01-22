@@ -84,7 +84,8 @@ export const getGroupDetails = async (groupId) => {
           first_name,
           last_name,
           nickname,
-          email
+          email,
+          avatar_url
         ),
         virtual_friends:virtual_friend_id (
           id,
@@ -106,6 +107,7 @@ export const getGroupDetails = async (groupId) => {
         (m.profiles ? `${m.profiles.first_name} ${m.profiles.last_name}` : m.virtual_friends?.name),
       nickname: m.profiles?.nickname,
       email: m.profiles?.email || m.virtual_friends?.email,
+      avatarUrl: m.profiles?.avatar_url,
       role: m.role,
       balance: parseFloat(m.balance) || 0,
       joinedAt: m.joined_at,
@@ -354,7 +356,7 @@ export const getGroupExpenses = async (groupId, filters = {}) => {
             display_name,
             user_id,
             virtual_friend_id,
-            profiles:user_id (first_name, last_name),
+            profiles:user_id (first_name, last_name, avatar_url),
             virtual_friends:virtual_friend_id (name)
           )
         ),
@@ -369,7 +371,7 @@ export const getGroupExpenses = async (groupId, filters = {}) => {
             display_name,
             user_id,
             virtual_friend_id,
-            profiles:user_id (first_name, last_name),
+            profiles:user_id (first_name, last_name, avatar_url),
             virtual_friends:virtual_friend_id (name)
           )
         )
@@ -631,7 +633,7 @@ export const getExpenseDetails = async (expenseId) => {
           display_name,
           user_id,
           virtual_friend_id,
-          profiles:user_id (first_name, last_name, nickname),
+          profiles:user_id (first_name, last_name, nickname, avatar_url),
           virtual_friends:virtual_friend_id (name)
         )
       `)
@@ -652,7 +654,7 @@ export const getExpenseDetails = async (expenseId) => {
           display_name,
           user_id,
           virtual_friend_id,
-          profiles:user_id (first_name, last_name, nickname),
+          profiles:user_id (first_name, last_name, nickname, avatar_url),
           virtual_friends:virtual_friend_id (name)
         )
       `)
@@ -668,6 +670,7 @@ export const getExpenseDetails = async (expenseId) => {
       displayName: p.member?.display_name || 
         (p.member?.profiles ? `${p.member.profiles.first_name} ${p.member.profiles.last_name}` : p.member?.virtual_friends?.name),
       nickname: p.member?.profiles?.nickname,
+      avatarUrl: p.member?.profiles?.avatar_url,
       amountPaid: parseFloat(p.amount_paid) || 0,
       isVirtual: p.member?.virtual_friend_id !== null
     }));
@@ -679,6 +682,7 @@ export const getExpenseDetails = async (expenseId) => {
       displayName: s.member?.display_name || 
         (s.member?.profiles ? `${s.member.profiles.first_name} ${s.member.profiles.last_name}` : s.member?.virtual_friends?.name),
       nickname: s.member?.profiles?.nickname,
+      avatarUrl: s.member?.profiles?.avatar_url,
       amountOwed: parseFloat(s.amount_owed) || 0,
       amountPaid: parseFloat(s.amount_paid) || 0,
       isSettled: s.is_settled,

@@ -269,7 +269,11 @@ const Friends = () => {
               {friends.map(({ friendshipId, friend, since }) => (
                 <div key={friendshipId} className="friends-list-item">
                   <div className="friends-avatar">
-                    {friend.first_name?.[0]}{friend.last_name?.[0]}
+                    {friend.avatar_url ? (
+                      <img src={friend.avatar_url} alt={friend.first_name} className="friends-avatar-img" />
+                    ) : (
+                      <>{friend.first_name?.[0]}{friend.last_name?.[0]}</>
+                    )}
                   </div>
                   <div className="friends-info">
                     <div className="friends-name">
@@ -360,7 +364,11 @@ const Friends = () => {
               {friends.map(({ friendshipId, friend, since }) => (
                 <div key={friendshipId} className="friends-list-item">
                   <div className="friends-avatar">
-                    {friend.first_name?.[0]}{friend.last_name?.[0]}
+                    {friend.avatar_url ? (
+                      <img src={friend.avatar_url} alt={friend.first_name} className="friends-avatar-img" />
+                    ) : (
+                      <>{friend.first_name?.[0]}{friend.last_name?.[0]}</>
+                    )}
                   </div>
                   <div className="friends-info">
                     <div className="friends-name">
@@ -468,7 +476,11 @@ const Friends = () => {
               {pendingRequests.map((request) => (
                 <div key={request.id} className="friends-list-item">
                   <div className="friends-avatar friends-avatar-accent">
-                    {request.user?.first_name?.[0]}{request.user?.last_name?.[0]}
+                    {request.user?.avatar_url ? (
+                      <img src={request.user.avatar_url} alt={request.user.first_name} className="friends-avatar-img" />
+                    ) : (
+                      <>{request.user?.first_name?.[0]}{request.user?.last_name?.[0]}</>
+                    )}
                   </div>
                   <div className="friends-info">
                     <div className="friends-name">
@@ -511,7 +523,11 @@ const Friends = () => {
               {sentRequests.map((request) => (
                 <div key={request.id} className="friends-list-item">
                   <div className="friends-avatar">
-                    {request.friend?.first_name?.[0]}{request.friend?.last_name?.[0]}
+                    {request.friend?.avatar_url ? (
+                      <img src={request.friend.avatar_url} alt={request.friend.first_name} className="friends-avatar-img" />
+                    ) : (
+                      <>{request.friend?.first_name?.[0]}{request.friend?.last_name?.[0]}</>
+                    )}
                   </div>
                   <div className="friends-info">
                     <div className="friends-name">
@@ -580,7 +596,11 @@ const Friends = () => {
                   <div key={user.id} className="friends-search-item">
                     <div className="friends-search-info">
                       <div className="friends-search-avatar">
-                        {user.first_name?.[0]}{user.last_name?.[0]}
+                        {user.avatar_url ? (
+                          <img src={user.avatar_url} alt={user.first_name} className="friends-avatar-img" />
+                        ) : (
+                          <>{user.first_name?.[0]}{user.last_name?.[0]}</>
+                        )}
                       </div>
                       <div>
                         <div className="friends-search-name">

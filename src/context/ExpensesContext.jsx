@@ -187,15 +187,20 @@ export const ExpensesProvider = ({ children }) => {
     return Array.from(currencies);
   };
 
+  // Helper: obtener monto real de un gasto (ya viene correcto en cuotas nuevas)
+  const getExpenseAmount = (expense) => {
+    return parseFloat(expense.amount || 0);
+  };
+
   // Función para calcular stats por moneda
   const getStatsByCurrency = (currency) => {
     const filteredExpenses = getExpensesByCurrency(currency);
     const totalSpent = filteredExpenses
       .filter(e => e.is_paid)
-      .reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+      .reduce((sum, e) => sum + getExpenseAmount(e), 0);
     const totalPending = filteredExpenses
       .filter(e => !e.is_paid)
-      .reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+      .reduce((sum, e) => sum + getExpenseAmount(e), 0);
     
     return {
       totalSpent,

@@ -1,107 +1,91 @@
 -- =====================================================
--- FIX: Políticas RLS para tabla notifications
+-- FIX SIMPLE Y DIRECTO: Notificaciones
 -- Ejecutar en Supabase SQL Editor
 -- =====================================================
 
--- 1. Primero, ver políticas actuales (para diagnóstico)
-SELECT 
-  policyname, 
-  permissive, 
-  roles, 
-  cmd,
-  qual::text as using_clause,
-  with_check::text as with_check_clause
-FROM pg_policies 
-WHERE tablename = 'notifications';
+-- PASO 1: Eliminar TODAS las políticas de notifications
+DROP POLICY IF EXISTS "notif_select" ON notifications;
+DROP POLICY IF EXISTS "notif_insert" ON notifications;
+DROP POLICY IF EXISTS "notif_update" ON notifications;
+DROP POLICY IF EXISTS "notif_delete" ON notifications;
+DROP POLICY IF EXISTS "notif_select_v2" ON notifications;
+DROP POLICY IF EXISTS "notif_insert_v2" ON notifications;
+DROP POLICY IF EXISTS "notif_update_v2" ON notifications;
+DROP POLICY IF EXISTS "notif_delete_v2" ON notifications;
+DROP POLICY IF EXISTS "notifications_select_own" ON notifications;
+DROP POLICY IF EXISTS "notifications_insert_any" ON notifications;
+DROP POLICY IF EXISTS "notifications_update_own" ON notifications;
+DROP POLICY IF EXISTS "notifications_delete_own" ON notifications;
 
--- 2. Eliminar políticas existentes que puedan estar mal configuradas
-DROP POLICY IF EXISTS "Users can view their notifications" ON notifications;
-DROP POLICY IF EXISTS "Users can view own notifications" ON notifications;
-DROP POLICY IF EXISTS "Users can insert notifications" ON notifications;
-DROP POLICY IF EXISTS "Users can create notifications" ON notifications;
-DROP POLICY IF EXISTS "System can create notifications" ON notifications;
-DROP POLICY IF EXISTS "Users can update their notifications" ON notifications;
-DROP POLICY IF EXISTS "Users can update own notifications" ON notifications;
-DROP POLICY IF EXISTS "Users can delete their notifications" ON notifications;
-DROP POLICY IF EXISTS "Users can delete own notifications" ON notifications;
-DROP POLICY IF EXISTS "Allow insert for authenticated users" ON notifications;
-DROP POLICY IF EXISTS "Allow all for authenticated" ON notifications;
-DROP POLICY IF EXISTS "notifications_select_policy" ON notifications;
-DROP POLICY IF EXISTS "notifications_insert_policy" ON notifications;
-DROP POLICY IF EXISTS "notifications_update_policy" ON notifications;
-DROP POLICY IF EXISTS "notifications_delete_policy" ON notifications;
+-- Eliminar cualquier otra que exista
+DO $$ 
+DECLARE r RECORD;
+BEGIN
+    FOR r IN SELECT policyname FROM pg_policies WHERE tablename = 'notifications'
+    LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON notifications', r.policyname);
+    END LOOP;
+END $$;
 
--- 3. Habilitar RLS si no está habilitado
+-- PASO 2: Habilitar RLS
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
--- 4. Crear políticas correctas
+-- PASO 3: Crear política de INSERT que permite todo
+CREATE POLICY "allow_insert_all" 
+ON notifications 
+FOR INSERT 
+TO authenticated 
+WITH CHECK (true);
 
--- SELECT: Los usuarios pueden ver sus propias notificaciones
-CREATE POLICY "notifications_select_policy" ON notifications
-  FOR SELECT
-  USING (auth.uid() = user_id);
+-- PASO 4: Crear otras políticas
+CREATE POLICY "allow_select_own" 
+ON notifications 
+FOR SELECT 
+TO authenticated 
+USING (user_id = auth.uid());
 
--- INSERT: Cualquier usuario autenticado puede crear notificaciones para otros usuarios
--- (Esto es necesario para enviar notificaciones a amigos)
-CREATE POLICY "notifications_insert_policy" ON notifications
-  FOR INSERT
-  WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY "allow_update_own" 
+ON notifications 
+FOR UPDATE 
+TO authenticated 
+USING (user_id = auth.uid());
 
--- UPDATE: Los usuarios solo pueden actualizar sus propias notificaciones
--- (Para marcar como leídas)
-CREATE POLICY "notifications_update_policy" ON notifications
-  FOR UPDATE
-  USING (auth.uid() = user_id);
+CREATE POLICY "allow_delete_own" 
+ON notifications 
+FOR DELETE 
+TO authenticated 
+USING (user_id = auth.uid());
 
--- DELETE: Los usuarios solo pueden eliminar sus propias notificaciones
-CREATE POLICY "notifications_delete_policy" ON notifications
-  FOR DELETE
-  USING (auth.uid() = user_id);
-
--- 5. Verificar que las políticas se crearon correctamente
-SELECT 
-  policyname, 
-  cmd,
-  permissive
-FROM pg_policies 
-WHERE tablename = 'notifications';
-
--- 6. También arreglar la tabla payment_confirmations si existe
-DO $$
+-- PASO 5: Crear función RPC como backup
+CREATE OR REPLACE FUNCTION create_notification(
+  p_user_id UUID,
+  p_type TEXT,
+  p_title TEXT,
+  p_message TEXT,
+  p_data JSONB DEFAULT NULL,
+  p_action_required BOOLEAN DEFAULT FALSE,
+  p_action_type TEXT DEFAULT NULL
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_id UUID;
 BEGIN
-  IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'payment_confirmations') THEN
-    -- Eliminar políticas existentes
-    DROP POLICY IF EXISTS "Users can view their confirmations" ON payment_confirmations;
-    DROP POLICY IF EXISTS "Users can create confirmations" ON payment_confirmations;
-    DROP POLICY IF EXISTS "Users can update confirmations" ON payment_confirmations;
-    DROP POLICY IF EXISTS "payment_confirmations_select_policy" ON payment_confirmations;
-    DROP POLICY IF EXISTS "payment_confirmations_insert_policy" ON payment_confirmations;
-    DROP POLICY IF EXISTS "payment_confirmations_update_policy" ON payment_confirmations;
-    
-    -- Habilitar RLS
-    ALTER TABLE payment_confirmations ENABLE ROW LEVEL SECURITY;
-    
-    -- SELECT: Usuario puede ver confirmaciones donde es requester o confirmer
-    CREATE POLICY "payment_confirmations_select_policy" ON payment_confirmations
-      FOR SELECT
-      USING (auth.uid() = requester_id OR auth.uid() = confirmer_id);
-    
-    -- INSERT: Usuarios autenticados pueden crear confirmaciones
-    CREATE POLICY "payment_confirmations_insert_policy" ON payment_confirmations
-      FOR INSERT
-      WITH CHECK (auth.uid() IS NOT NULL);
-    
-    -- UPDATE: Solo el confirmer puede actualizar (para responder)
-    CREATE POLICY "payment_confirmations_update_policy" ON payment_confirmations
-      FOR UPDATE
-      USING (auth.uid() = confirmer_id);
-    
-    RAISE NOTICE 'Políticas de payment_confirmations actualizadas';
-  END IF;
-END $$;
+  INSERT INTO notifications (user_id, type, title, message, data, action_required, action_type, read, created_at)
+  VALUES (p_user_id, p_type, p_title, p_message, p_data, p_action_required, p_action_type, false, NOW())
+  RETURNING id INTO v_id;
+  RETURN v_id;
+END;
+$$;
 
--- 7. Mensaje de éxito
-DO $$
-BEGIN
-  RAISE NOTICE '✅ Políticas RLS de notifications actualizadas correctamente';
-END $$;
+GRANT EXECUTE ON FUNCTION create_notification TO authenticated;
+
+-- VERIFICACIÓN
+SELECT '✅ Políticas creadas:' as status;
+SELECT policyname, cmd, permissive FROM pg_policies WHERE tablename = 'notifications';
+
+SELECT '✅ Función creada:' as status;
+SELECT EXISTS(SELECT 1 FROM pg_proc WHERE proname = 'create_notification') as funcion_existe;

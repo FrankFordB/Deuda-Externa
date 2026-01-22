@@ -281,6 +281,68 @@ export const revertInstallmentPayment = async (installmentId, userId, reason = '
 };
 
 /**
+ * Notificar al acreedor que el deudor pagó una cuota
+ * El acreedor debe confirmar el pago
+ */
+export const notifyInstallmentPayment = async (installmentId, debtorId) => {
+  try {
+    // Obtener información de la cuota y la deuda
+    const { data: installment, error: fetchError } = await supabase
+      .from('debt_installments')
+      .select('*, debt:debts!debt_id(*)')
+      .eq('id', installmentId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    const debt = installment.debt;
+    
+    // Verificar que el usuario es el deudor
+    if (debt.debtor_id !== debtorId) {
+      return { 
+        success: false, 
+        error: { message: 'No tienes permiso para notificar este pago' } 
+      };
+    }
+
+    // Obtener nombre del deudor
+    const { data: debtorProfile } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, nickname')
+      .eq('id', debtorId)
+      .single();
+
+    const debtorName = debtorProfile?.first_name 
+      ? `${debtorProfile.first_name} ${debtorProfile.last_name || ''}`.trim()
+      : debtorProfile?.nickname || 'Tu deudor';
+
+    // Crear notificación para el acreedor
+    await createNotification({
+      userId: debt.creditor_id,
+      type: 'payment_claim',
+      title: '💰 Pago de cuota reportado',
+      message: `${debtorName} indica que pagó la cuota ${installment.installment_number}/${debt.installments} de "${debt.description}" (${debt.currency_symbol || '$'}${installment.amount})`,
+      data: {
+        debt_id: debt.id,
+        installment_id: installmentId,
+        installment_number: installment.installment_number,
+        amount: installment.amount,
+        debtor_id: debtorId,
+        debtor_name: debtorName
+      },
+      actionRequired: true,
+      actionType: 'confirm_payment'
+    });
+
+    return { success: true, error: null };
+  } catch (error) {
+    if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { success: false, error: null };
+    console.error('Error notificando pago de cuota:', error);
+    return { success: false, error };
+  }
+};
+
+/**
  * Obtener deudas donde soy acreedor (me deben)
  * Incluye tanto deudores reales como virtuales
  */
@@ -290,7 +352,7 @@ export const getDebtsAsCreditor = async (userId) => {
       .from('debts')
       .select(`
         *,
-        debtor:profiles!debts_debtor_id_fkey(id, nickname, first_name, last_name),
+        debtor:profiles!debts_debtor_id_fkey(id, nickname, first_name, last_name, avatar_url),
         virtual_debtor:virtual_friends!debts_virtual_friend_id_fkey(id, name, phone, email)
       `)
       .eq('creditor_id', userId)
@@ -332,7 +394,7 @@ export const getDebtsAsDebtor = async (userId) => {
       .from('debts')
       .select(`
         *,
-        creditor:profiles!debts_creditor_id_fkey(id, nickname, first_name, last_name)
+        creditor:profiles!debts_creditor_id_fkey(id, nickname, first_name, last_name, avatar_url)
       `)
       .eq('debtor_id', userId)
       .order('created_at', { ascending: false });
@@ -573,7 +635,7 @@ export const getDebtsByFriend = async (userId) => {
       .select(`
         amount,
         status,
-        debtor:profiles!debts_debtor_id_fkey(id, nickname, first_name, last_name)
+        debtor:profiles!debts_debtor_id_fkey(id, nickname, first_name, last_name, avatar_url)
       `)
       .eq('creditor_id', userId)
       .eq('status', 'accepted');
@@ -583,7 +645,7 @@ export const getDebtsByFriend = async (userId) => {
       .select(`
         amount,
         status,
-        creditor:profiles!debts_creditor_id_fkey(id, nickname, first_name, last_name)
+        creditor:profiles!debts_creditor_id_fkey(id, nickname, first_name, last_name, avatar_url)
       `)
       .eq('debtor_id', userId)
       .eq('status', 'accepted');
@@ -654,5 +716,6 @@ export default {
   getDebtInstallments,
   markInstallmentAsPaid,
   revertInstallmentPayment,
+  notifyInstallmentPayment,
   subscribeDebts
 };

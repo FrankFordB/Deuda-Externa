@@ -4,6 +4,40 @@
   margin: 0 auto;
 }
 
+/* Error Banner */
+.errorBanner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  border: 1px solid #f87171;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  color: #b91c1c;
+  font-size: 0.95rem;
+}
+
+.errorIcon {
+  font-size: 1.25rem;
+}
+
+.errorClose {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #b91c1c;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.errorClose:hover {
+  opacity: 1;
+}
+
 .header {
   display: flex;
   justify-content: space-between;
@@ -306,7 +340,11 @@
 /* Responsive tablet */
 @media (max-width: 1024px) {
   .grid {
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+  
+  .statsGrid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
 }
 
@@ -333,11 +371,14 @@
 
   .actions {
     flex-direction: column;
+    gap: 0.75rem;
   }
 
   .actions button {
     width: 100%;
     padding: 0.875rem;
+    font-size: 1rem;
+    min-height: 48px; /* Touch target */
   }
 
   .statsGrid {
@@ -347,6 +388,7 @@
 
   .statCard {
     padding: 1.25rem !important;
+    flex-direction: row;
   }
 
   .statIcon {
@@ -357,33 +399,34 @@
     font-size: 1.75rem;
   }
 
-  .formContainer {
-    padding: 1.25rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .formHeader h3 {
-    font-size: 1.25rem;
-  }
-
   .grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
   }
 
   .expenseCard {
-    margin-bottom: 0.5rem;
+    margin-bottom: 0;
+  }
+
+  .cardHeader {
+    flex-wrap: wrap;
+    gap: 0.75rem;
   }
 
   .cardTitle {
     gap: 0.75rem;
+    flex: 1;
+    min-width: 0;
   }
 
   .categoryIcon {
-    font-size: 1.75rem;
+    font-size: 2rem;
+    flex-shrink: 0;
   }
 
   .cardTitle h4 {
     font-size: 1rem;
+    word-break: break-word;
   }
 
   .description {
@@ -391,7 +434,7 @@
   }
 
   .infoGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 0.75rem;
   }
 
@@ -400,12 +443,16 @@
   }
 
   .cardActions {
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
 
   .cardActions button {
-    width: 100%;
+    flex: 1;
+    min-width: calc(50% - 0.25rem);
     padding: 0.75rem;
+    min-height: 44px; /* Touch target */
   }
 
   .empty {
@@ -419,8 +466,15 @@
   .empty h3 {
     font-size: 1.25rem;
   }
+  
+  .errorBanner {
+    padding: 0.875rem 1rem;
+    font-size: 0.875rem;
+    flex-wrap: wrap;
+  }
 }
 
+/* Responsive móvil pequeño */
 @media (max-width: 480px) {
   .panel {
     padding: 0.75rem;
@@ -428,10 +482,15 @@
 
   .header {
     margin-bottom: 1rem;
+    gap: 0.75rem;
   }
 
   .title {
     font-size: 1.25rem;
+  }
+
+  .subtitle {
+    font-size: 0.8125rem;
   }
 
   .statsGrid {
@@ -455,10 +514,6 @@
     font-size: 0.8125rem;
   }
 
-  .formContainer {
-    padding: 1rem;
-  }
-
   .cardHeader {
     flex-direction: column;
     align-items: flex-start;
@@ -467,5 +522,46 @@
 
   .statusBadge {
     align-self: flex-start;
+  }
+  
+  .infoGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .cardActions {
+    flex-direction: column;
+  }
+  
+  .cardActions button {
+    width: 100%;
+    min-width: 100%;
+  }
+  
+  .empty {
+    padding: 2rem 1rem;
+  }
+  
+  .emptyIcon {
+    font-size: 2.5rem;
+  }
+  
+  .empty h3 {
+    font-size: 1.125rem;
+  }
+  
+  .empty p {
+    font-size: 0.875rem;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .expenseCard:active {
+    transform: scale(0.98);
+    opacity: 0.95;
+  }
+  
+  .cardActions button:active {
+    transform: scale(0.95);
   }
 }

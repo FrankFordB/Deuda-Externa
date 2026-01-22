@@ -101,6 +101,7 @@
     padding: 0.875rem;
     font-size: 1rem;
     border-radius: 12px;
+    min-height: 48px;
   }
 }
 
@@ -115,6 +116,11 @@
 
   .infoBox {
     padding: 0.75rem;
+  }
+  
+  .actions button {
+    min-height: 52px;
+    font-size: 1.0625rem;
   }
 }
 

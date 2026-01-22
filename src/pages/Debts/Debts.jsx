@@ -96,6 +96,11 @@ const Debts = () => {
   const [debtToCollect, setDebtToCollect] = useState(null);
   const [collecting, setCollecting] = useState(false);
   
+  // Modal de confirmación para revertir pago
+  const [showRevertModal, setShowRevertModal] = useState(false);
+  const [installmentToRevert, setInstallmentToRevert] = useState(null);
+  const [reverting, setReverting] = useState(false);
+  
   // Contadores de notificaciones
   const [debtorNotifCount, setDebtorNotifCount] = useState(0);
   const [creditorNotifCount, setCreditorNotifCount] = useState(0);
@@ -204,13 +209,18 @@ const Debts = () => {
     }
   };
 
-  // Revertir pago de una cuota
-  const handleRevertInstallmentPayment = async (installmentId) => {
-    if (!window.confirm('¿Estás seguro de que quieres revertir este pago?')) {
-      return;
-    }
+  // Revertir pago de una cuota - Abrir modal de confirmación
+  const handleRevertInstallmentPayment = (installmentId) => {
+    setInstallmentToRevert(installmentId);
+    setShowRevertModal(true);
+  };
+  
+  // Confirmar reversión de pago
+  const confirmRevertPayment = async () => {
+    if (!installmentToRevert) return;
     
-    const result = await debtsService.revertInstallmentPayment(installmentId, user.id, 'Reversión manual del acreedor');
+    setReverting(true);
+    const result = await debtsService.revertInstallmentPayment(installmentToRevert, user.id, 'Reversión manual del acreedor');
     if (result.success) {
       showSuccess('Pago revertido correctamente');
       // Recargar cuotas inmediatamente
@@ -224,6 +234,19 @@ const Debts = () => {
       refreshDebts();
     } else {
       showError(result.error?.message || 'Error al revertir el pago');
+    }
+    setReverting(false);
+    setShowRevertModal(false);
+    setInstallmentToRevert(null);
+  };
+
+  // Notificar al acreedor que pagué una cuota
+  const handleNotifyPayment = async (installmentId) => {
+    const result = await debtsService.notifyInstallmentPayment(installmentId, user.id);
+    if (result.success) {
+      showSuccess('¡Notificación enviada! El acreedor confirmará tu pago.');
+    } else {
+      showError(result.error?.message || 'Error al notificar el pago');
     }
   };
 
@@ -257,7 +280,8 @@ const Debts = () => {
       return {
         name: `${person.first_name} ${person.last_name}`,
         nickname: person.nickname,
-        initials: `${person.first_name?.[0]}${person.last_name?.[0]}`.toUpperCase()
+        initials: `${person.first_name?.[0]}${person.last_name?.[0]}`.toUpperCase(),
+        avatarUrl: person.avatar_url
       };
     } else if (virtualFriend) {
       const names = virtualFriend.name.split(' ');
@@ -266,14 +290,16 @@ const Debts = () => {
         nickname: virtualFriend.email || virtualFriend.phone || 'Amigo Virtual',
         initials: names.length > 1 
           ? `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase()
-          : `${names[0][0]}${names[0][1] || ''}`.toUpperCase()
+          : `${names[0][0]}${names[0][1] || ''}`.toUpperCase(),
+        avatarUrl: null
       };
     }
     
     return {
       name: 'Desconocido',
       nickname: '',
-      initials: '??'
+      initials: '??',
+      avatarUrl: null
     };
   };
 
@@ -815,20 +841,39 @@ const Debts = () => {
                     <div className="debt-item-header">
                       <div className="debt-item-person">
                         <div className="debt-avatar">
-                          {creditorInfo.initials}
+                          {creditorInfo.avatarUrl ? (
+                            <img src={creditorInfo.avatarUrl} alt={creditorInfo.name} className="debt-avatar-img" />
+                          ) : (
+                            creditorInfo.initials
+                          )}
                         </div>
                         <div className="debt-person-info">
                           <h3>{creditorInfo.name}</h3>
                           <div className="debt-person-nickname">@{creditorInfo.nickname}</div>
                         </div>
                       </div>
-                      <div className="debt-amount-main">{debt.currency_symbol || '$'}{debt.amount.toLocaleString('es-AR')}</div>
+                      <div className="debt-amount-section">
+                        {debt.installments > 1 ? (
+                          <>
+                            <div className="debt-amount-main">{debt.currency_symbol || '$'}{(debt.installment_amount || debt.amount / debt.installments).toLocaleString('es-AR')}</div>
+                            <div className="debt-installment-label">Cuota 1/{debt.installments}</div>
+                          </>
+                        ) : (
+                          <div className="debt-amount-main">{debt.currency_symbol || '$'}{debt.amount.toLocaleString('es-AR')}</div>
+                        )}
+                      </div>
                     </div>
                     <div className="debt-item-body">
                       <div className="debt-info-row">
                         <span className="debt-info-label">Descripción:</span>
                         <span className="debt-info-value">{debt.description}</span>
                       </div>
+                      {debt.installments > 1 && (
+                        <div className="debt-info-row">
+                          <span className="debt-info-label">Total deuda:</span>
+                          <span className="debt-info-value">{debt.currency_symbol || '$'}{debt.amount.toLocaleString('es-AR')}</span>
+                        </div>
+                      )}
                     </div>
                     <div className="debt-item-actions">
                       <button className="debt-action-btn btn-success" onClick={() => handleAccept(debt.id)}>
@@ -871,7 +916,16 @@ const Debts = () => {
                           <div className="debt-person-nickname">@{creditorInfo.nickname}</div>
                         </div>
                       </div>
-                      <div className="debt-amount-main">{debt.currency_symbol || '$'}{debt.amount.toLocaleString('es-AR')}</div>
+                      <div className="debt-amount-section">
+                        {hasInstallments ? (
+                          <>
+                            <div className="debt-amount-main">{debt.currency_symbol || '$'}{(debt.installment_amount || debt.amount / debt.installments).toLocaleString('es-AR')}</div>
+                            <div className="debt-installment-label">Cuota {debt.paid_installments + 1 || 1}/{debt.installments}</div>
+                          </>
+                        ) : (
+                          <div className="debt-amount-main">{debt.currency_symbol || '$'}{debt.amount.toLocaleString('es-AR')}</div>
+                        )}
+                      </div>
                     </div>
                     <div className="debt-item-body">
                       <div className="debt-info-row">
@@ -884,11 +938,8 @@ const Debts = () => {
                       </div>
                       {hasInstallments && (
                         <div className="debt-info-row">
-                          <span className="debt-info-label">Cuotas:</span>
-                          <span className="badge-installment-primary">
-                            <RefreshCw size={14} />
-                            {debt.installments} cuotas de {formatCurrency(debt.installment_amount || debt.amount / debt.installments)}
-                          </span>
+                          <span className="debt-info-label">Total deuda:</span>
+                          <span className="debt-info-value">{debt.currency_symbol || '$'}{debt.amount.toLocaleString('es-AR')} ({debt.installments} cuotas)</span>
                         </div>
                       )}
                       {debt.due_date && (
@@ -957,14 +1008,27 @@ const Debts = () => {
                     <div className="debt-item-header">
                       <div className="debt-item-person">
                         <div className="debt-avatar">
-                          {debtorInfo.initials}
+                          {debtorInfo.avatarUrl ? (
+                            <img src={debtorInfo.avatarUrl} alt={debtorInfo.name} className="debt-avatar-img" />
+                          ) : (
+                            debtorInfo.initials
+                          )}
                         </div>
                         <div className="debt-person-info">
                           <h3>{debtorInfo.name}</h3>
                           <div className="debt-person-nickname">@{debtorInfo.nickname}</div>
                         </div>
                       </div>
-                      <div className="debt-amount-main">{debt.currency_symbol || '$'}{debt.amount.toLocaleString('es-AR')}</div>
+                      <div className="debt-amount-section">
+                        {hasInstallments ? (
+                          <>
+                            <div className="debt-amount-main">{debt.currency_symbol || '$'}{(debt.installment_amount || debt.amount / debt.installments).toLocaleString('es-AR')}</div>
+                            <div className="debt-installment-label">Cuota {paidInstallments + 1 || 1}/{debt.installments}</div>
+                          </>
+                        ) : (
+                          <div className="debt-amount-main">{debt.currency_symbol || '$'}{debt.amount.toLocaleString('es-AR')}</div>
+                        )}
+                      </div>
                     </div>
                     <div className="debt-item-body">
                       <div className="debt-info-row">
@@ -978,11 +1042,8 @@ const Debts = () => {
                       {hasInstallments && (
                         <>
                           <div className="debt-info-row">
-                            <span className="debt-info-label">Cuotas:</span>
-                            <span className="badge-installment-success">
-                              <RefreshCw size={14} />
-                              {debt.installments} cuotas de {formatCurrency(debt.installment_amount || debt.amount / debt.installments)}
-                            </span>
+                            <span className="debt-info-label">Total deuda:</span>
+                            <span className="debt-info-value">{debt.currency_symbol || '$'}{debt.amount.toLocaleString('es-AR')} ({debt.installments} cuotas)</span>
                           </div>
                           {paidInstallments > 0 && (
                             <div className="debt-info-row">
@@ -1478,7 +1539,8 @@ const Debts = () => {
                             <><Clock size={14} /> Pendiente</>
                           )}
                         </span>
-                        <div>
+                        <div className="debts-installment-actions">
+                          {/* Botón para el acreedor: confirmar pago */}
                           {!inst.paid && selectedDebt.creditor_id === user?.id && (
                             <Button 
                               size="sm" 
@@ -1486,9 +1548,21 @@ const Debts = () => {
                               icon={<CheckCircle size={16} />}
                               onClick={() => handleMarkInstallmentPaid(inst.id)}
                             >
-                              Pagar
+                              Confirmar Pago
                             </Button>
                           )}
+                          {/* Botón para el deudor: notificar que pagó */}
+                          {!inst.paid && selectedDebt.debtor_id === user?.id && (
+                            <Button 
+                              size="sm" 
+                              variant="primary"
+                              icon={<Send size={16} />}
+                              onClick={() => handleNotifyPayment(inst.id)}
+                            >
+                              Ya pagué
+                            </Button>
+                          )}
+                          {/* Botón para el acreedor: revertir pago */}
                           {inst.paid && selectedDebt.creditor_id === user?.id && (
                             <Button 
                               size="sm" 
@@ -1499,6 +1573,12 @@ const Debts = () => {
                             >
                               Revertir
                             </Button>
+                          )}
+                          {/* Mensaje para el deudor cuando ya está pagada */}
+                          {inst.paid && selectedDebt.debtor_id === user?.id && (
+                            <span className="debts-installment-confirmed">
+                              <CheckCircle size={14} /> Confirmada
+                            </span>
                           )}
                         </div>
                       </div>
@@ -1666,6 +1746,45 @@ const Debts = () => {
               </div>
             </>
           )}
+        </div>
+      </Modal>
+
+      {/* Modal Confirmar Reversión de Pago */}
+      <Modal
+        show={showRevertModal}
+        onClose={() => {
+          setShowRevertModal(false);
+          setInstallmentToRevert(null);
+        }}
+        title={<span className="debts-detail-section-title"><AlertCircle size={22} /> Confirmar Reversión</span>}
+      >
+        <div className="debts-confirm-modal">
+          <p className="debts-confirm-text">
+            ¿Estás seguro de que quieres revertir este pago?
+          </p>
+          <p className="debts-confirm-note">
+            Esta acción marcará la cuota como pendiente nuevamente y se notificará al deudor.
+          </p>
+          <div className="debts-form-actions">
+            <Button 
+              variant="secondary" 
+              onClick={() => {
+                setShowRevertModal(false);
+                setInstallmentToRevert(null);
+              }} 
+              disabled={reverting}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              variant="danger"
+              onClick={confirmRevertPayment}
+              disabled={reverting}
+              icon={reverting ? <Clock size={16} /> : <RefreshCw size={16} />}
+            >
+              {reverting ? 'Revirtiendo...' : 'Confirmar Reversión'}
+            </Button>
+          </div>
         </div>
       </Modal>
     </div>

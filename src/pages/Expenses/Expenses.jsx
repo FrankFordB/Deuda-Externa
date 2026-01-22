@@ -286,9 +286,11 @@ const Expenses = () => {
             )}
           </p>
         </div>
-        <Button icon="➕" onClick={() => setShowModal(true)}>
-          Nuevo Gasto
-        </Button>
+        {activeTab === 'expenses' && (
+          <Button icon="➕" onClick={() => setShowModal(true)}>
+            Nuevo Gasto
+          </Button>
+        )}
       </div>
 
       {/* Tabs */}

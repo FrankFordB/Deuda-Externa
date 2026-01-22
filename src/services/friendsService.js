@@ -10,7 +10,7 @@ export const searchUserByNickname = async (nickname) => {
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, nickname, first_name, last_name, country')
+      .select('id, nickname, first_name, last_name, country, avatar_url')
       .ilike('nickname', `%${nickname}%`)
       .limit(10);
 
@@ -146,7 +146,7 @@ export const getFriends = async (userId) => {
     // Obtener los perfiles de los amigos
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
-      .select('id, nickname, first_name, last_name, country')
+      .select('id, nickname, first_name, last_name, country, avatar_url')
       .in('id', friendIds);
 
     if (profilesError) throw profilesError;
@@ -191,7 +191,7 @@ export const getPendingRequests = async (userId) => {
     const userIds = data.map(r => r.user_id);
     const { data: profiles } = await supabase
       .from('profiles')
-      .select('id, nickname, first_name, last_name, country')
+      .select('id, nickname, first_name, last_name, country, avatar_url')
       .in('id', userIds);
 
     const requests = data.map(r => ({
@@ -230,7 +230,7 @@ export const getSentRequests = async (userId) => {
     const friendIds = data.map(r => r.friend_id);
     const { data: profiles } = await supabase
       .from('profiles')
-      .select('id, nickname, first_name, last_name, country')
+      .select('id, nickname, first_name, last_name, country, avatar_url')
       .in('id', friendIds);
 
     const requests = data.map(r => ({

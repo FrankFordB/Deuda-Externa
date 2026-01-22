@@ -186,6 +186,12 @@ COMMENT ON COLUMN expenses.recurring_expense_id IS 'Referencia al gasto recurren
 -- RLS (Row Level Security)
 ALTER TABLE recurring_expenses ENABLE ROW LEVEL SECURITY;
 
+-- Eliminar políticas existentes si existen
+DROP POLICY IF EXISTS recurring_expenses_select_own ON recurring_expenses;
+DROP POLICY IF EXISTS recurring_expenses_insert_own ON recurring_expenses;
+DROP POLICY IF EXISTS recurring_expenses_update_own ON recurring_expenses;
+DROP POLICY IF EXISTS recurring_expenses_delete_own ON recurring_expenses;
+
 -- Política: Los usuarios solo pueden ver sus propios gastos recurrentes
 CREATE POLICY recurring_expenses_select_own
   ON recurring_expenses FOR SELECT

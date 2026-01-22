@@ -59,7 +59,7 @@ export const signUp = async ({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/email-verified`,
+        emailRedirectTo: 'https://deuda-externa.vercel.app/email-verified',
         data: {
           first_name: firstName,
           last_name: lastName,
@@ -101,7 +101,7 @@ export const resendVerificationEmail = async (email) => {
       type: 'signup',
       email: email,
       options: {
-        emailRedirectTo: `${window.location.origin}/email-verified`
+        emailRedirectTo: 'https://deuda-externa.vercel.app/email-verified'
       }
     });
 

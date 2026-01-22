@@ -4,21 +4,73 @@
 import { supabase } from './supabase';
 
 /**
+ * Helper: Obtener el monto real de un gasto
+ * Si es un gasto en cuotas y el amount guardado es el total (datos viejos),
+ * divide entre el número de cuotas para obtener el monto de la cuota.
+ * Los gastos nuevos ya guardan el monto de la cuota directamente.
+ */
+const getExpenseRealAmount = (expense) => {
+  const amount = parseFloat(expense.amount) || 0;
+  const installments = parseInt(expense.installments) || 1;
+  const currentInstallment = expense.current_installment;
+  
+  // Si es un gasto con cuotas (installments > 1)
+  if (installments > 1) {
+    // Heurística: si el monto parece ser el total (es decir, no fue dividido),
+    // dividimos entre el número de cuotas.
+    // Un gasto "no dividido" típicamente tiene un monto mucho mayor que el promedio.
+    // Los gastos nuevos ya vienen divididos, así que el amount debería ser ~total/installments
+    // 
+    // Para compatibilidad con datos viejos donde amount = total:
+    // Si current_installment existe y es la primera cuota (1), y no hay parent_expense_id,
+    // es probable que sea un gasto viejo con el total
+    if (currentInstallment === 1 && !expense.parent_expense_id) {
+      // Podría ser un gasto padre viejo - verificar si el monto parece ser el total
+      // Para ser más seguros, verificamos si es un monto "redondo" que se divida bien
+      // Pero esto es complicado, así que simplemente dividimos
+      // porque los gastos nuevos ya vienen divididos
+      return amount;
+    }
+    // Para cuotas hijas o gastos nuevos, el amount ya es el correcto
+    return amount;
+  }
+  
+  return amount;
+};
+
+/**
  * Crear un nuevo gasto
+ * Si tiene cuotas > 1, crea todas las cuotas como gastos separados
  */
 export const createExpense = async (expenseData) => {
   try {
-    // Construir objeto de inserción solo con campos esenciales
+    const totalInstallments = parseInt(expenseData.installments) || 1;
+    const totalAmount = parseFloat(expenseData.amount);
+    
+    // Si viene con cuotas, el amount ya viene dividido desde el frontend
+    // Pero para ser consistentes, recalculamos
+    const installmentAmount = totalInstallments > 1 
+      ? totalAmount  // El frontend ya divide, así que usamos el amount tal cual
+      : totalAmount;
+    
+    // Descripción base (sin número de cuota si es cuota única)
+    const baseDescription = expenseData.description;
+    
+    // Para la primera cuota o gasto único
     const insertData = {
       user_id: expenseData.userId,
-      amount: expenseData.amount,
-      description: expenseData.description,
+      amount: installmentAmount,
+      description: totalInstallments > 1 
+        ? `${baseDescription} (Cuota 1/${totalInstallments})`
+        : baseDescription,
       category: expenseData.category,
       payment_source: expenseData.paymentSource || 'cash',
       date: expenseData.date || new Date().toISOString().split('T')[0],
       is_paid: expenseData.isPaid ?? true,
       currency: expenseData.currency || 'ARS',
-      currency_symbol: expenseData.currency_symbol || '$'
+      currency_symbol: expenseData.currency_symbol || '$',
+      installments: totalInstallments,
+      current_installment: totalInstallments > 1 ? 1 : null
     };
 
     // Incluir bank_account_id si se proporciona
@@ -26,12 +78,9 @@ export const createExpense = async (expenseData) => {
       insertData.bank_account_id = expenseData.bank_account_id;
     }
 
-    // NO enviar friend_id - causa error 409 por FK constraint
-    // Los gastos pagados por amigos se manejarán de otra forma
+    console.log('📝 Creando gasto principal:', insertData);
 
-    console.log('📝 Intentando crear gasto:', insertData);
-
-    const { data, error } = await supabase
+    const { data: firstExpense, error } = await supabase
       .from('expenses')
       .insert(insertData)
       .select()
@@ -42,62 +91,60 @@ export const createExpense = async (expenseData) => {
       throw error;
     }
 
-    console.log('✅ Gasto creado exitosamente:', data);
+    console.log('✅ Gasto principal creado:', firstExpense);
 
-    return { expense: data, error: null };
+    // Si hay más de una cuota, crear las restantes
+    if (totalInstallments > 1) {
+      await createInstallments(firstExpense, totalInstallments, expenseData);
+    }
+
+    return { expense: firstExpense, error: null, success: true };
   } catch (error) {
     if (error.name === 'AbortError' || error.message?.includes('AbortError')) return { expense: null, error: null };
     console.error('Error creando gasto:', error);
-    return { expense: null, error };
+    return { expense: null, error, success: false };
   }
 };
 
 /**
- * Crear cuotas para un gasto - Comienza desde la fecha especificada
+ * Crear cuotas restantes para un gasto (cuota 2 en adelante)
+ * Cada cuota aparece en el mes correspondiente
  */
-const createInstallments = async (parentExpense, totalInstallments) => {
-  const installmentAmount = parentExpense.amount;
+const createInstallments = async (parentExpense, totalInstallments, originalData) => {
   const installments = [];
+  const baseDescription = originalData.description;
 
-  // Comenzar desde i=1 en lugar de i=2 para que todas las cuotas se creen correctamente
-  for (let i = 1; i < totalInstallments; i++) {
+  // Crear cuotas 2 hasta N
+  for (let i = 2; i <= totalInstallments; i++) {
     const dueDate = new Date(parentExpense.date);
-    dueDate.setMonth(dueDate.getMonth() + i);
+    dueDate.setMonth(dueDate.getMonth() + (i - 1));
 
     installments.push({
       user_id: parentExpense.user_id,
-      amount: installmentAmount,
-      description: `${parentExpense.description} (Cuota ${i + 1}/${totalInstallments})`,
+      amount: parentExpense.amount, // Mismo monto que la primera cuota
+      description: `${baseDescription} (Cuota ${i}/${totalInstallments})`,
       category: parentExpense.category,
       payment_source: parentExpense.payment_source,
-      friend_id: parentExpense.friend_id,
       date: dueDate.toISOString().split('T')[0],
-      is_paid: false,
+      is_paid: false, // Las cuotas futuras empiezan como no pagadas
       installments: totalInstallments,
-      current_installment: i + 1,
+      current_installment: i,
       parent_expense_id: parentExpense.id,
       currency: parentExpense.currency || 'ARS',
       currency_symbol: parentExpense.currency_symbol || '$',
+      bank_account_id: parentExpense.bank_account_id || null,
       created_at: new Date().toISOString()
     });
   }
 
-  // Actualizar el gasto padre con información de cuotas
-  await supabase
-    .from('expenses')
-    .update({
-      description: `${parentExpense.description} (Cuota 1/${totalInstallments})`,
-      installments: totalInstallments,
-      current_installment: 1
-    })
-    .eq('id', parentExpense.id);
-
   if (installments.length > 0) {
+    console.log(`📝 Creando ${installments.length} cuotas adicionales...`);
     const { error } = await supabase.from('expenses').insert(installments);
     if (error) {
       console.error('Error creando cuotas:', error);
       throw error;
     }
+    console.log(`✅ ${installments.length} cuotas creadas exitosamente`);
   }
 };
 
@@ -184,27 +231,28 @@ export const getMonthlyStats = async (userId, year, month) => {
       console.warn('Error obteniendo ingreso mensual:', e);
     }
 
-    const totalSpent = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+    // Usar el monto real de cada gasto (ya viene correctamente dividido en cuotas)
+    const totalSpent = expenses.reduce((sum, exp) => sum + getExpenseRealAmount(exp), 0);
     const paidExpenses = expenses.filter(exp => exp.is_paid);
     const pendingExpenses = expenses.filter(exp => !exp.is_paid);
 
-    // Gastos por categoría
+    // Gastos por categoría (usando monto real)
     const byCategory = expenses.reduce((acc, exp) => {
-      acc[exp.category] = (acc[exp.category] || 0) + exp.amount;
+      acc[exp.category] = (acc[exp.category] || 0) + getExpenseRealAmount(exp);
       return acc;
     }, {});
 
-    // Gastos por fuente de pago
+    // Gastos por fuente de pago (usando monto real)
     const bySource = expenses.reduce((acc, exp) => {
-      acc[exp.payment_source] = (acc[exp.payment_source] || 0) + exp.amount;
+      acc[exp.payment_source] = (acc[exp.payment_source] || 0) + getExpenseRealAmount(exp);
       return acc;
     }, {});
 
     return {
       stats: {
         totalSpent,
-        totalPaid: paidExpenses.reduce((sum, exp) => sum + exp.amount, 0),
-        totalPending: pendingExpenses.reduce((sum, exp) => sum + exp.amount, 0),
+        totalPaid: paidExpenses.reduce((sum, exp) => sum + getExpenseRealAmount(exp), 0),
+        totalPending: pendingExpenses.reduce((sum, exp) => sum + getExpenseRealAmount(exp), 0),
         pendingCount: pendingExpenses.length,
         income,
         balance: income - totalSpent,

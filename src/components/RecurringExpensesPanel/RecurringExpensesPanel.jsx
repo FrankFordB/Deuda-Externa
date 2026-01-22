@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { recurringExpensesService } from '../../services';
-import { RecurringExpenseForm, Button, Card } from '../';
+import { RecurringExpenseForm, Button, Card, Modal } from '../';
 import styles from './RecurringExpensesPanel.module.css';
 
 const RecurringExpensesPanel = ({ userId, bankAccounts }) => {
@@ -11,6 +11,7 @@ const RecurringExpensesPanel = ({ userId, bankAccounts }) => {
   const [showForm, setShowForm] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (userId) {
@@ -22,10 +23,12 @@ const RecurringExpensesPanel = ({ userId, bankAccounts }) => {
   const loadRecurringExpenses = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await recurringExpensesService.getUserRecurringExpenses(userId);
       setRecurringExpenses(data);
     } catch (error) {
       console.error('Error loading recurring expenses:', error);
+      setError('No se pudieron cargar los gastos recurrentes. Es posible que la tabla no exista.');
     } finally {
       setLoading(false);
     }
@@ -42,13 +45,15 @@ const RecurringExpensesPanel = ({ userId, bankAccounts }) => {
 
   const handleCreate = async (data) => {
     try {
+      console.log('Creating recurring expense with data:', data);
       await recurringExpensesService.createRecurringExpense(userId, data);
       await loadRecurringExpenses();
       await loadStats();
       setShowForm(false);
+      setError(null);
     } catch (error) {
       console.error('Error creating recurring expense:', error);
-      alert('Error al crear gasto recurrente');
+      setError(`Error al crear gasto recurrente: ${error.message || 'Error desconocido'}`);
     }
   };
 
@@ -129,6 +134,20 @@ const RecurringExpensesPanel = ({ userId, bankAccounts }) => {
 
   return (
     <div className={styles.panel}>
+      {/* Error Message */}
+      {error && (
+        <div className={styles.errorBanner}>
+          <span className={styles.errorIcon}>⚠️</span>
+          <span>{error}</span>
+          <button 
+            className={styles.errorClose}
+            onClick={() => setError(null)}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+      
       <div className={styles.header}>
         <div className={styles.titleSection}>
           <h2 className={styles.title}>💳 Gastos Recurrentes</h2>
@@ -171,19 +190,15 @@ const RecurringExpensesPanel = ({ userId, bankAccounts }) => {
       )}
 
       {(showForm || editingExpense) && (
-        <div className={styles.formContainer}>
-          <div className={styles.formHeader}>
-            <h3>{editingExpense ? 'Editar Gasto Recurrente' : 'Nuevo Gasto Recurrente'}</h3>
-            <button 
-              className={styles.closeButton}
-              onClick={() => {
-                setShowForm(false);
-                setEditingExpense(null);
-              }}
-            >
-              ✕
-            </button>
-          </div>
+        <Modal
+          isOpen={showForm || !!editingExpense}
+          onClose={() => {
+            setShowForm(false);
+            setEditingExpense(null);
+          }}
+          title={editingExpense ? '✏️ Editar Gasto Fijo' : '➕ Nuevo Gasto Fijo'}
+          size="md"
+        >
           <RecurringExpenseForm
             bankAccounts={bankAccounts}
             initialData={editingExpense}
@@ -199,7 +214,7 @@ const RecurringExpensesPanel = ({ userId, bankAccounts }) => {
               setEditingExpense(null);
             }}
           />
-        </div>
+        </Modal>
       )}
 
       <div className={styles.list}>

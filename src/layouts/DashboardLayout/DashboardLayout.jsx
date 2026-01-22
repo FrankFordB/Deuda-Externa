@@ -218,7 +218,15 @@ const DashboardLayout = () => {
                   </div>
                   <div className={styles.userRole}>@{profile?.nickname}</div>
                 </div>
-                <div className="avatar">{getInitials()}</div>
+                {profile?.avatar_url ? (
+                  <img 
+                    src={profile.avatar_url} 
+                    alt="Avatar" 
+                    className={styles.userAvatar}
+                  />
+                ) : (
+                  <div className="avatar">{getInitials()}</div>
+                )}
               </button>
 
               {userMenuOpen && (
