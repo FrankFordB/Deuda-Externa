@@ -2,7 +2,8 @@
  * NotificationsPanel - Panel de notificaciones con pestañas y alertas
  */
 import { useState, useRef, useEffect } from 'react';
-import { useNotifications, useExpenses, useDebts } from '../../context';
+import { useNotifications, useExpenses, useDebts, useAuth } from '../../context';
+import { markInstallmentAsPaid } from '../../services/debtsService';
 import styles from './NotificationsPanel.module.css';
 
 const NotificationsPanel = () => {
@@ -17,7 +18,8 @@ const NotificationsPanel = () => {
   } = useNotifications();
   
   const { upcomingPayments: upcomingPaymentsData } = useExpenses();
-  const { markInstallmentAsPaid, refreshDebts } = useDebts();
+  const { refreshDebts } = useDebts();
+  const { user } = useAuth();
   
   // Extraer el array de pagos del objeto
   const upcomingPayments = upcomingPaymentsData?.payments || [];
@@ -81,8 +83,8 @@ const NotificationsPanel = () => {
       if (notification.type === 'payment_claim' && notification.data?.installment_id) {
         if (confirmed) {
           // Marcar la cuota como pagada
-          const result = await markInstallmentAsPaid(notification.data.installment_id);
-          if (result.success) {
+          const result = await markInstallmentAsPaid(notification.data.installment_id, user.id);
+          if (!result.error) {
             await deleteNotification(notification.id);
             refreshDebts();
           }
