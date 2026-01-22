@@ -457,7 +457,36 @@
 
 @media (max-width: 480px) {
   .panel {
-    width: calc(100vw - 2rem);
-    right: -1rem;
+    position: fixed;
+    top: 60px;
+    left: 0.5rem;
+    right: 0.5rem;
+    width: auto;
+    max-height: calc(100vh - 80px);
+  }
+
+  .bellIcon {
+    font-size: 1.4rem;
+  }
+
+  .notificationItem {
+    padding: 0.75rem;
+  }
+
+  .notificationContent h4 {
+    font-size: 0.85rem;
+  }
+
+  .notificationContent p {
+    font-size: 0.8rem;
+  }
+
+  .actionButtons {
+    flex-direction: column;
+  }
+
+  .actionBtn {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.75rem;
   }
 }

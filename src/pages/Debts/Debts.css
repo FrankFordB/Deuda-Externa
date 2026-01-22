@@ -1491,36 +1491,64 @@
 }
 
 @media (max-width: 480px) {
+  .debts-container {
+    padding: var(--debts-spacing-sm);
+  }
+
   .debts-header {
-    padding: var(--debts-spacing-md);
+    padding: var(--debts-spacing-sm);
+    gap: var(--debts-spacing-sm);
   }
 
   .debts-title {
-    font-size: 1.25rem;
-  }
-
-  .debts-subtitle {
-    font-size: 0.9rem;
-  }
-
-  .debt-avatar {
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
-    font-size: 0.95rem;
-  }
-
-  .debt-person-info h3 {
-    font-size: 0.95rem;
-  }
-
-  .debt-amount-main {
     font-size: 1.1rem;
   }
 
-  .debt-action-btn {
+  .debts-subtitle {
     font-size: 0.8rem;
-    padding: var(--debts-spacing-xs) var(--debts-spacing-sm);
+  }
+
+  .debts-tabs {
+    gap: var(--debts-spacing-xs);
+    padding: 2px;
+  }
+
+  .debts-tab {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+
+  .debt-avatar {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    font-size: 0.85rem;
+  }
+
+  .debt-person-info h3 {
+    font-size: 0.85rem;
+  }
+
+  .debt-person-info p {
+    font-size: 0.7rem;
+  }
+
+  .debt-amount-main {
+    font-size: 1rem;
+  }
+
+  .debt-action-btn {
+    font-size: 0.7rem;
+    padding: 4px 8px;
+  }
+
+  .debt-item {
+    padding: var(--debts-spacing-sm);
+  }
+
+  .debt-item-actions {
+    gap: var(--debts-spacing-xs);
+    flex-wrap: wrap;
   }
 
   .debts-summary-amount {

@@ -578,4 +578,53 @@
   .quickAccessPanels {
     grid-template-columns: 1fr;
   }
+
+  .welcome {
+    margin-bottom: var(--spacing-md);
+  }
+
+  .welcomeTitle {
+    font-size: 1.25rem;
+  }
+
+  .welcomeText {
+    font-size: 0.875rem;
+  }
+
+  .headerActions {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .welcomeTitle {
+    font-size: 1.1rem;
+  }
+
+  .welcomeText {
+    font-size: 0.8rem;
+  }
+
+  .statsGrid {
+    gap: var(--spacing-sm);
+  }
+
+  .headerActions {
+    flex-direction: column;
+    gap: var(--spacing-xs);
+  }
+
+  .dateSelector {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .cardTitle {
+    font-size: 1rem;
+  }
+
+  .cardDescription {
+    font-size: 0.8rem;
+  }
 }
