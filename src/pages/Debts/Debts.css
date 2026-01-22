@@ -195,7 +195,7 @@
   gap: var(--debts-spacing-lg);
   padding: var(--debts-spacing-lg);
   min-height: 100vh;
-  background: var(--debts-bg-page);
+  background: #f0f9ff !important;
   animation: debts-fade-in 0.4s ease;
 }
 
@@ -560,6 +560,7 @@
 .debts-list {
   display: flex;
   flex-direction: column;
+  background: #ffffff !important;
 }
 
 .debt-item {
@@ -569,6 +570,7 @@
   border-bottom: 1px solid var(--debts-border-light);
   transition: all var(--debts-transition-fast);
   animation: debts-fade-in 0.3s ease;
+  background: #ffffff !important;
 }
 
 .debt-item:last-child {
@@ -576,7 +578,7 @@
 }
 
 .debt-item:hover {
-  background: var(--debts-gradient-subtle);
+  background: #f0fdfa !important;
 }
 
 .debt-item-header {

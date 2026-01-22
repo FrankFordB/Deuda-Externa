@@ -1243,41 +1243,88 @@
 }
 
 @media (max-width: 480px) {
+  .friends-page {
+    padding: var(--friends-spacing-sm);
+  }
+
   .friends-header {
-    padding: var(--friends-spacing-md);
+    padding: var(--friends-spacing-sm);
+    gap: var(--friends-spacing-sm);
   }
 
   .friends-title {
-    font-size: 1.25rem;
+    font-size: 1.1rem;
+  }
+
+  .friends-subtitle {
+    font-size: 0.8rem;
   }
 
   .friends-stat-item {
-    font-size: 0.8rem;
-    padding: var(--friends-spacing-xs) var(--friends-spacing-sm);
+    font-size: 0.7rem;
+    padding: 4px 8px;
+  }
+
+  .friends-tabs-container {
+    padding: 2px;
+    gap: 2px;
   }
 
   .friends-tab {
-    padding: var(--friends-spacing-xs) var(--friends-spacing-sm);
-    font-size: 0.75rem;
+    padding: 6px 8px;
+    font-size: 0.7rem;
+    gap: 4px;
+  }
+
+  .friends-tab svg {
+    width: 14px;
+    height: 14px;
   }
 
   .friends-list-item {
     padding: var(--friends-spacing-sm);
-  }
-
-  .friends-name {
-    font-size: 0.95rem;
-    flex-wrap: wrap;
-  }
-
-  .friends-meta {
-    font-size: 0.8rem;
     gap: var(--friends-spacing-sm);
   }
 
+  .friends-avatar {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    font-size: 0.85rem;
+  }
+
+  .friends-name {
+    font-size: 0.85rem;
+  }
+
+  .friends-meta {
+    font-size: 0.7rem;
+    gap: 6px;
+  }
+
   .friends-btn {
+    font-size: 0.7rem;
+    padding: 4px 8px;
+  }
+
+  .friends-actions {
+    gap: var(--friends-spacing-xs);
+    flex-wrap: wrap;
+  }
+
+  .friends-header-actions {
+    gap: var(--friends-spacing-xs);
+  }
+
+  .friends-btn-add,
+  .friends-btn-virtual {
     font-size: 0.8rem;
-    padding: var(--friends-spacing-xs) var(--friends-spacing-sm);
+    padding: 8px 12px;
+  }
+
+  .friends-search-input {
+    font-size: 0.85rem;
+    padding: 8px 12px;
   }
 }
 
