@@ -133,8 +133,12 @@ export const deleteAccount = async (accountId) => {
  */
 export const getAccountExpenses = async (accountId, year, month) => {
   try {
-    const startDate = new Date(year, month - 1, 1).toISOString();
-    const endDate = new Date(year, month, 0, 23, 59, 59).toISOString();
+    // Usar formato de fecha simple YYYY-MM-DD (el campo date en expenses es tipo date, no timestamp)
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+    console.log('📅 Buscando gastos desde', startDate, 'hasta', endDate);
 
     // Primero obtener la cuenta para saber su moneda
     const { data: account, error: accountError } = await supabase
@@ -168,8 +172,12 @@ export const getAccountExpenses = async (accountId, year, month) => {
  */
 export const getAccountStats = async (accountId, year, month) => {
   try {
-    const startDate = new Date(year, month - 1, 1).toISOString();
-    const endDate = new Date(year, month, 0, 23, 59, 59).toISOString();
+    // Usar formato de fecha simple YYYY-MM-DD
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+    console.log('📊 Stats: Buscando gastos desde', startDate, 'hasta', endDate);
 
     // Primero obtener la cuenta para saber su moneda
     const { data: account, error: accountError } = await supabase
@@ -191,6 +199,8 @@ export const getAccountStats = async (accountId, year, month) => {
 
     if (expensesError) throw expensesError;
 
+    console.log('📊 Gastos encontrados:', expenses?.length || 0);
+
     // Obtener TODAS las deudas vinculadas a esta cuenta (sin filtro de mes)
     // porque las deudas afectan el balance total, no solo del mes
     const { data: allDebts, error: allDebtsError } = await supabase
@@ -202,9 +212,11 @@ export const getAccountStats = async (accountId, year, month) => {
     if (allDebtsError) throw allDebtsError;
 
     // Obtener deudas del mes específico (para estadísticas mensuales)
+    // Usar comparación de fechas simplificada
     const monthDebts = allDebts?.filter(d => {
-      const debtDate = new Date(d.created_at);
-      return debtDate >= new Date(startDate) && debtDate <= new Date(endDate);
+      if (!d.created_at) return false;
+      const debtDateStr = d.created_at.split('T')[0]; // YYYY-MM-DD
+      return debtDateStr >= startDate && debtDateStr <= endDate;
     }) || [];
 
     // Calcular estadísticas

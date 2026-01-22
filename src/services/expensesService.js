@@ -21,6 +21,11 @@ export const createExpense = async (expenseData) => {
       currency_symbol: expenseData.currency_symbol || '$'
     };
 
+    // Incluir bank_account_id si se proporciona
+    if (expenseData.bank_account_id) {
+      insertData.bank_account_id = expenseData.bank_account_id;
+    }
+
     // NO enviar friend_id - causa error 409 por FK constraint
     // Los gastos pagados por amigos se manejarán de otra forma
 

@@ -653,5 +653,6 @@ export default {
   getDebtsByFriend,
   getDebtInstallments,
   markInstallmentAsPaid,
+  revertInstallmentPayment,
   subscribeDebts
 };

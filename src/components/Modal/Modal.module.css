@@ -1,19 +1,19 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.5) !important;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-lg);
-  z-index: var(--z-modal);
-  animation: fadeIn var(--transition-fast) forwards;
+  padding: 1.5rem;
+  z-index: 9999;
+  animation: fadeIn 150ms forwards;
 }
 
 .modal {
-  background: white;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-xl);
+  background: white !important;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
   max-height: 90vh;
   overflow: hidden;
   display: flex;
@@ -52,14 +52,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-lg);
-  border-bottom: 1px solid var(--gray-100);
+  padding: 1.5rem;
+  border-bottom: 1px solid #f3f4f6;
+  background: white;
 }
 
 .title {
   font-size: 1.125rem;
   font-weight: 600;
-  color: var(--gray-800);
+  color: #1f2937;
   margin: 0;
 }
 
@@ -69,31 +70,35 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-full);
-  color: var(--gray-500);
+  border-radius: 9999px;
+  color: #6b7280;
   font-size: 0.875rem;
-  transition: all var(--transition-fast);
+  transition: all 150ms ease;
+  border: none;
+  background: transparent;
+  cursor: pointer;
 }
 
 .closeBtn:hover {
-  background: var(--gray-100);
-  color: var(--gray-700);
+  background: #f3f4f6;
+  color: #374151;
 }
 
 .body {
-  padding: var(--spacing-lg);
+  padding: 1.5rem;
   overflow-y: auto;
   flex: 1;
+  background: white;
 }
 
 .footer {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-lg);
-  border-top: 1px solid var(--gray-100);
-  background: var(--gray-50);
+  gap: 0.5rem;
+  padding: 1.5rem;
+  border-top: 1px solid #f3f4f6;
+  background: #f9fafb;
 }
 
 @keyframes fadeIn {

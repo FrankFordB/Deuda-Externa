@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink, Navigate, useLocation } from 'react-router-dom';
 import { useAuth, useUI, useFriends, useDebts, useNotifications } from '../../context';
-import { NotificationsPanel, MonthlyStatsPanel, DueDatesPanel } from '../../components';
+import { NotificationsPanel } from '../../components';
 import remindersService from '../../services/remindersService';
 import styles from './DashboardLayout.module.css';
 
@@ -17,10 +17,6 @@ const DashboardLayout = () => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [showMonthlyStats, setShowMonthlyStats] = useState(false);
-  const [showDueDates, setShowDueDates] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [upcomingDueCount, setUpcomingDueCount] = useState(0);
 
   // Obtener contadores de forma segura
@@ -80,6 +76,7 @@ const DashboardLayout = () => {
         { path: '/expenses', label: 'Gastos', icon: '💰' },
         { path: '/debts', label: 'Deudas', icon: '💳', badge: debtRequestCount },
         { path: '/friends', label: 'Amigos', icon: '👥', badge: friendRequestCount },
+        { path: '/shared-expenses', label: 'Gastos Compartidos', icon: '🤝' },
       ]
     },
     {
@@ -87,8 +84,8 @@ const DashboardLayout = () => {
       items: [
         { path: '/statistics', label: 'Estadísticas', icon: '📈' },
         { path: '/installments', label: 'Cuotas', icon: '🔄' },
-        { path: 'monthly-stats', label: 'Resumen Mensual', icon: '📅', isAction: true, action: () => setShowMonthlyStats(true) },
-        { path: 'due-dates', label: 'Vencimientos', icon: '📅', isAction: true, action: () => setShowDueDates(true), badge: upcomingDueCount },
+        { path: '/monthly-stats', label: 'Resumen Mensual', icon: '📅' },
+        { path: '/due-dates', label: 'Vencimientos', icon: '📅', badge: upcomingDueCount },
       ]
     },
     {
@@ -154,31 +151,20 @@ const DashboardLayout = () => {
             <div key={section.section} className={styles.navSection}>
               <div className={styles.navSectionTitle}>{section.section}</div>
               {section.items.map((item) => (
-                item.isAction ? (
-                  <button
-                    key={item.path}
-                    onClick={item.action}
-                    className={styles.navLink}
-                  >
-                    <span className={styles.navIcon}>{item.icon}</span>
-                    <span className={styles.navText}>{item.label}</span>
-                  </button>
-                ) : (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    className={({ isActive }) => 
-                      `${styles.navLink} ${isActive ? styles.active : ''}`
-                    }
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <span className={styles.navIcon}>{item.icon}</span>
-                    <span className={styles.navText}>{item.label}</span>
-                    {item.badge > 0 && (
-                      <span className={styles.navBadge}>{item.badge}</span>
-                    )}
-                  </NavLink>
-                )
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) => 
+                    `${styles.navLink} ${isActive ? styles.active : ''}`
+                  }
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <span className={styles.navIcon}>{item.icon}</span>
+                  <span className={styles.navText}>{item.label}</span>
+                  {item.badge > 0 && (
+                    <span className={styles.navBadge}>{item.badge}</span>
+                  )}
+                </NavLink>
               ))}
             </div>
           ))}
@@ -268,20 +254,6 @@ const DashboardLayout = () => {
         <main className={styles.pageContent}>
           <Outlet />
         </main>
-
-      {/* Monthly Stats Panel */}
-      <MonthlyStatsPanel 
-        isOpen={showMonthlyStats}
-        onClose={() => setShowMonthlyStats(false)}
-        month={selectedMonth}
-        year={selectedYear}
-      />
-
-      {/* Due Dates Panel */}
-      <DueDatesPanel 
-        isOpen={showDueDates}
-        onClose={() => setShowDueDates(false)}
-      />
 
         {/* Footer */}
         <footer className={styles.footer}>

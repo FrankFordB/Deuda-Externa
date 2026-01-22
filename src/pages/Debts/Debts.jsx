@@ -6,7 +6,34 @@ import { useAuth, useDebts, useFriends, useUI, useNotifications } from '../../co
 import { Button, Card, Input, Select, Modal, Loading, EmptyState, CurrencySelect, CURRENCIES } from '../../components';
 import virtualFriendsService from '../../services/virtualFriendsService';
 import debtsService from '../../services/debtsService';
-import styles from './Debts.module.css';
+import { createNotification } from '../../services/notificationsService';
+import { 
+  CreditCard, 
+  Plus, 
+  DollarSign, 
+  TrendingUp, 
+  TrendingDown, 
+  BarChart3,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Calendar,
+  RefreshCw,
+  Send,
+  Eye,
+  Filter,
+  ArrowUpDown,
+  X,
+  Users,
+  UserPlus,
+  Wallet,
+  Building2,
+  FileText,
+  ChevronRight,
+  Bell
+} from 'lucide-react';
+import './Debts.css';
 
 const Debts = () => {
   const { user, profile } = useAuth();
@@ -40,7 +67,7 @@ const Debts = () => {
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc', 'desc'
   const [filterByDate, setFilterByDate] = useState(''); // fecha específica
   const [searchName, setSearchName] = useState(''); // buscar por nombre
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
   
   // Amigos virtuales
   const [virtualFriends, setVirtualFriends] = useState([]);
@@ -221,6 +248,35 @@ const Debts = () => {
     return `${currency}${amount.toLocaleString('es-AR', { minimumFractionDigits: 0 })}`;
   };
 
+  // Obtener información de la persona (real o virtual)
+  const getPersonInfo = (debt, role = 'creditor') => {
+    const person = debt[role];
+    const virtualFriend = debt.virtual_friend;
+    
+    if (person) {
+      return {
+        name: `${person.first_name} ${person.last_name}`,
+        nickname: person.nickname,
+        initials: `${person.first_name?.[0]}${person.last_name?.[0]}`.toUpperCase()
+      };
+    } else if (virtualFriend) {
+      const names = virtualFriend.name.split(' ');
+      return {
+        name: virtualFriend.name,
+        nickname: virtualFriend.email || virtualFriend.phone || 'Amigo Virtual',
+        initials: names.length > 1 
+          ? `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase()
+          : `${names[0][0]}${names[0][1] || ''}`.toUpperCase()
+      };
+    }
+    
+    return {
+      name: 'Desconocido',
+      nickname: '',
+      initials: '??'
+    };
+  };
+
   // Función para filtrar y ordenar deudas
   const filterAndSortDebts = (debts) => {
     let filtered = [...debts];
@@ -228,10 +284,10 @@ const Debts = () => {
     // Filtrar por nombre
     if (searchName.trim()) {
       filtered = filtered.filter(debt => {
-        const name = activeTab === 'owe' 
-          ? `${debt.creditor?.first_name} ${debt.creditor?.last_name}`.toLowerCase()
-          : `${debt.debtor?.first_name} ${debt.debtor?.last_name}`.toLowerCase();
-        return name.includes(searchName.toLowerCase());
+        const personInfo = activeTab === 'owe' 
+          ? getPersonInfo(debt, 'creditor')
+          : getPersonInfo(debt, 'debtor');
+        return personInfo.name.toLowerCase().includes(searchName.toLowerCase());
       });
     }
     
@@ -467,8 +523,8 @@ const Debts = () => {
     
     if (result.success) {
       showSuccess(wasPaid 
-        ? '✅ Deuda reactivada - marcada como pendiente' 
-        : '💰 Deuda marcada como pagada'
+        ? 'Deuda reactivada - marcada como pendiente' 
+        : 'Deuda marcada como pagada'
       );
       setShowMarkPaidModal(false);
       setDebtToMarkPaid(null);
@@ -489,14 +545,11 @@ const Debts = () => {
     setCollecting(true);
     
     try {
-      // Crear notificación de recordatorio
-      const { createNotification } = await import('../../services/notificationsService');
-      
       const result = await createNotification({
         userId: debtToCollect.debtor_id,
         type: 'payment_reminder',
-        title: '💰 Recordatorio de Pago',
-        message: `${profile?.full_name || 'Alguien'} te recuerda la deuda pendiente: "${debtToCollect.description}" por ${debtToCollect.currency_symbol}${debtToCollect.amount.toLocaleString('es-AR')}`,
+        title: '💸 Recordatorio de Pago',
+        message: `${profile?.full_name || profile?.first_name || 'Alguien'} te recuerda la deuda pendiente: "${debtToCollect.description}" por ${debtToCollect.currency_symbol || '$'}${debtToCollect.amount.toLocaleString('es-AR')}`,
         data: {
           debt_id: debtToCollect.id,
           amount: debtToCollect.amount,
@@ -507,13 +560,15 @@ const Debts = () => {
       });
 
       if (!result.error) {
-        showSuccess('Recordatorio enviado correctamente');
+        showSuccess('¡Recordatorio enviado! Tu amigo recibirá una notificación.');
         setShowCollectModal(false);
         setDebtToCollect(null);
       } else {
-        showError('Error al enviar recordatorio');
+        console.error('Error enviando recordatorio:', result.error);
+        showError('Error al enviar recordatorio: ' + (result.error?.message || 'Intenta de nuevo'));
       }
     } catch (error) {
+      console.error('Error enviando recordatorio:', error);
       showError('Error al enviar recordatorio');
     } finally {
       setCollecting(false);
@@ -579,10 +634,10 @@ const Debts = () => {
 
   const getStatusBadge = (status) => {
     const badges = {
-      pending: { label: '⏳ Pendiente', class: 'pending' },
-      accepted: { label: '✅ Aceptada', class: 'accepted' },
+      pending: { label: 'Pendiente', class: 'pending' },
+      accepted: { label: 'Aceptada', class: 'accepted' },
       rejected: { label: '❌ Rechazada', class: 'rejected' },
-      paid: { label: '💰 Pagada', class: 'paid' }
+      paid: { label: 'Pagada', class: 'paid' }
     };
     return badges[status] || badges.pending;
   };
@@ -592,100 +647,104 @@ const Debts = () => {
   }
 
   return (
-    <div className={styles.debts}>
+    <div className="debts-container">
       {/* Header */}
-      <div className={styles.header}>
-        <div className={styles.headerLeft}>
-          <h2 className={styles.title}>Deudas</h2>
-          <p className={styles.subtitle}>
-            Gestiona las deudas con tus amigos
+      <div className="debts-header">
+        <div className="debts-header-left">
+          <h2 className="debts-title"><CreditCard size={28} />Deudas</h2>
+          <p className="debts-subtitle">
+            Gestiona las deudas con tus amigos de forma profesional
           </p>
         </div>
-        <Button icon="➕" onClick={() => setShowModal(true)}>
+        <Button icon={<Plus size={20} />} onClick={() => setShowModal(true)}>
           Nueva Deuda
         </Button>
       </div>
 
       {/* Resumen */}
-      <div className={styles.summaryGrid}>
+      <div className="debts-summary-grid">
         <Card variant="success" onClick={() => handleSummaryClick('owed')} style={{ cursor: 'pointer' }}>
-          <div className={styles.summaryItem}>
-            <span className={styles.summaryIcon}>💰</span>
-            <div>
-              <div className={styles.summaryValue}>{formatCurrency(summary?.totalOwedToMe || 0)}</div>
-              <div className={styles.summaryLabel}>Me deben</div>
+          <div className="debts-summary-item">
+            <span className="debts-summary-icon icon-owed"><TrendingUp size={36} strokeWidth={2.5} /></span>
+            <div className="debts-summary-info">
+              <h3 className="debts-summary-amount">{formatCurrency(summary?.totalOwedToMe || 0)}</h3>
+              <div>Me deben</div>
             </div>
           </div>
         </Card>
         <Card variant="warning" onClick={() => handleSummaryClick('owe')} style={{ cursor: 'pointer' }}>
-          <div className={styles.summaryItem}>
-            <span className={styles.summaryIcon}>💸</span>
-            <div>
-              <div className={styles.summaryValue}>{formatCurrency(summary?.totalIOwe || 0)}</div>
-              <div className={styles.summaryLabel}>Yo debo</div>
+          <div className="debts-summary-item">
+            <span className="debts-summary-icon icon-owe"><TrendingDown size={36} strokeWidth={2.5} /></span>
+            <div className="debts-summary-info">
+              <h3 className="debts-summary-amount">{formatCurrency(summary?.totalIOwe || 0)}</h3>
+              <div>Yo debo</div>
             </div>
           </div>
         </Card>
         <Card variant={summary?.netBalance >= 0 ? 'gradient' : 'dark'}>
-          <div className={styles.summaryItem}>
-            <span className={styles.summaryIcon}>📊</span>
-            <div>
-              <div className={styles.summaryValue}>{formatCurrency(summary?.netBalance || 0)}</div>
-              <div className={styles.summaryLabel}>Balance Neto</div>
+          <div className="debts-summary-item">
+            <span className="debts-summary-icon icon-total"><BarChart3 size={36} strokeWidth={2.5} /></span>
+            <div className="debts-summary-info">
+              <h3 className="debts-summary-amount">{formatCurrency(summary?.netBalance || 0)}</h3>
+              <div>Balance Neto</div>
             </div>
           </div>
         </Card>
       </div>
 
       {/* Tabs */}
-      <div className={styles.tabs}>
+      <div className="debts-tabs">
         <button 
-          className={`${styles.tab} ${activeTab === 'pending' ? styles.active : ''}`}
+          className={`debts-tab ${activeTab === 'pending' ? 'active' : ''}`}
           onClick={() => setActiveTab('pending')}
         >
-          Pendientes de Aceptar
+          <span>Pendientes de Aceptar</span>
           {pendingDebts.length > 0 && (
-            <span className={styles.tabBadge}>{pendingDebts.length}</span>
+            <span className="debts-tab-badge">{pendingDebts.length}</span>
           )}
         </button>
         <button 
-          className={`${styles.tab} ${activeTab === 'owe' ? styles.active : ''}`}
+          className={`debts-tab ${activeTab === 'owe' ? 'active' : ''}`}
           onClick={() => setActiveTab('owe')}
         >
-          Lo que Debo
+          <span>Lo que Debo</span>
           {debtorNotifCount > 0 && (
-            <span className={styles.notificationBadge}>{debtorNotifCount}</span>
+            <span className="debts-tab-badge badge-danger">{debtorNotifCount}</span>
           )}
         </button>
         <button 
-          className={`${styles.tab} ${activeTab === 'owed' ? styles.active : ''}`}
+          className={`debts-tab ${activeTab === 'owed' ? 'active' : ''}`}
           onClick={() => setActiveTab('owed')}
         >
-          Me Deben
+          <span>Me Deben</span>
           {creditorNotifCount > 0 && (
-            <span className={styles.notificationBadge}>{creditorNotifCount}</span>
+            <span className="debts-tab-badge badge-danger">{creditorNotifCount}</span>
           )}
         </button>
       </div>
 
       {/* Filtros y Ordenamiento */}
       {(activeTab === 'owe' || activeTab === 'owed') && (
-        <Card>
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1rem' }}>
+        <div className="debts-filters-card">
+          <div className="debts-filters-header">
             <Button 
               size="sm" 
               variant="ghost"
+              icon={<Filter size={16} />}
               onClick={() => setShowFilters(!showFilters)}
             >
-              🔍 {showFilters ? 'Ocultar' : 'Filtros'}
+              {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
             </Button>
             
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <label style={{ fontSize: '0.85rem', color: 'var(--gray-600)' }}>Ordenar por:</label>
+            <div className="debts-sort-group">
+              <label className="debts-sort-label">
+                <ArrowUpDown size={16} />
+                Ordenar por:
+              </label>
               <select 
                 value={sortBy} 
                 onChange={(e) => setSortBy(e.target.value)}
-                style={{ padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid var(--gray-300)', fontSize: '0.85rem' }}
+                className="debts-sort-select"
               >
                 <option value="date">Fecha</option>
                 <option value="amount">Monto</option>
@@ -694,7 +753,7 @@ const Debts = () => {
               
               <button
                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                style={{ padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid var(--gray-300)', background: 'white', cursor: 'pointer', fontSize: '0.85rem' }}
+                className="debts-sort-btn"
               >
                 {sortOrder === 'asc' ? '↑ Ascendente' : '↓ Descendente'}
               </button>
@@ -702,91 +761,90 @@ const Debts = () => {
           </div>
           
           {showFilters && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--gray-200)' }}>
-              <div>
-                <label style={{ fontSize: '0.85rem', color: 'var(--gray-600)', marginBottom: '0.25rem', display: 'block' }}>Buscar por nombre</label>
+            <div className="debts-filters-body">
+              <div className="debts-filter-field">
+                <label className="debts-filter-label">Buscar por nombre</label>
                 <input
                   type="text"
                   value={searchName}
                   onChange={(e) => setSearchName(e.target.value)}
                   placeholder="Nombre del amigo..."
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--gray-300)', fontSize: '0.85rem' }}
+                  className="debts-filter-input"
                 />
               </div>
               
-              <div>
-                <label style={{ fontSize: '0.85rem', color: 'var(--gray-600)', marginBottom: '0.25rem', display: 'block' }}>Filtrar por fecha</label>
+              <div className="debts-filter-field">
+                <label className="debts-filter-label">Filtrar por fecha</label>
                 <input
                   type="date"
                   value={filterByDate}
                   onChange={(e) => setFilterByDate(e.target.value)}
-                  style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--gray-300)', fontSize: '0.85rem' }}
+                  className="debts-filter-input"
                 />
               </div>
               
               {(searchName || filterByDate) && (
-                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                <div className="debts-filter-field">
                   <Button
                     size="sm"
                     variant="ghost"
+                    icon={<X size={16} />}
                     onClick={() => {
                       setSearchName('');
                       setFilterByDate('');
                     }}
                   >
-                    ✖ Limpiar filtros
+                    Limpiar filtros
                   </Button>
                 </div>
               )}
             </div>
           )}
-        </Card>
+        </div>
       )}
 
       {/* Content */}
       <Card>
         {activeTab === 'pending' && (
           pendingDebts.length > 0 ? (
-            <div className={styles.debtsList}>
-              {pendingDebts.map((debt) => (
-                <div key={debt.id} className={styles.debtItem}>
-                  <div className={styles.debtInfo}>
-                    <div className={styles.debtAvatar}>
-                      {debt.creditor?.first_name?.[0]}{debt.creditor?.last_name?.[0]}
-                    </div>
-                    <div>
-                      <div className={styles.debtName}>
-                        {debt.creditor?.first_name} {debt.creditor?.last_name}
+            <div className="debts-list">
+              {pendingDebts.map((debt) => {
+                const creditorInfo = getPersonInfo(debt, 'creditor');
+                return (
+                  <div key={debt.id} className="debt-item">
+                    <div className="debt-item-header">
+                      <div className="debt-item-person">
+                        <div className="debt-avatar">
+                          {creditorInfo.initials}
+                        </div>
+                        <div className="debt-person-info">
+                          <h3>{creditorInfo.name}</h3>
+                          <div className="debt-person-nickname">@{creditorInfo.nickname}</div>
+                        </div>
                       </div>
-                      <div className={styles.debtNickname}>@{debt.creditor?.nickname}</div>
-                      <div className={styles.debtDesc}>{debt.description}</div>
+                      <div className="debt-amount-main">{debt.currency_symbol || '$'}{debt.amount.toLocaleString('es-AR')}</div>
+                    </div>
+                    <div className="debt-item-body">
+                      <div className="debt-info-row">
+                        <span className="debt-info-label">Descripción:</span>
+                        <span className="debt-info-value">{debt.description}</span>
+                      </div>
+                    </div>
+                    <div className="debt-item-actions">
+                      <button className="debt-action-btn btn-success" onClick={() => handleAccept(debt.id)}>
+                        <CheckCircle size={16} /> Aceptar
+                      </button>
+                      <button className="debt-action-btn btn-danger" onClick={() => handleReject(debt.id)}>
+                        <XCircle size={16} /> Rechazar
+                      </button>
                     </div>
                   </div>
-                  <div className={styles.debtRight}>
-                    <div className={styles.debtAmount}>{debt.currency_symbol || '$'}{debt.amount.toLocaleString('es-AR')}</div>
-                    <div className={styles.debtActions}>
-                      <Button 
-                        size="sm" 
-                        variant="success"
-                        onClick={() => handleAccept(debt.id)}
-                      >
-                        Aceptar
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="danger"
-                        onClick={() => handleReject(debt.id)}
-                      >
-                        Rechazar
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <EmptyState
-              icon="✅"
+              icon={<CheckCircle size={48} color="#10b981" />}
               title="Sin deudas pendientes"
               description="No tienes deudas pendientes de aceptar"
             />
@@ -795,67 +853,81 @@ const Debts = () => {
 
         {activeTab === 'owe' && (
           debtsAsDebtor.filter(d => d.status !== 'pending').length > 0 ? (
-            <div className={styles.debtsList}>
+            <div className="debts-list">
               {filterAndSortDebts(debtsAsDebtor.filter(d => d.status !== 'pending')).map((debt) => {
                 const status = getStatusBadge(debt.status);
                 const isVirtualDebt = debt.virtual_friend_id != null;
                 const hasInstallments = debt.installments > 1;
+                const creditorInfo = getPersonInfo(debt, 'creditor');
                 return (
-                  <div key={debt.id} className={styles.debtItem}>
-                    <div className={styles.debtInfo}>
-                      <div className={styles.debtAvatar}>
-                        {debt.creditor?.first_name?.[0]}{debt.creditor?.last_name?.[0]}
-                      </div>
-                      <div>
-                        <div className={styles.debtName}>
-                          {debt.creditor?.first_name} {debt.creditor?.last_name}
+                  <div key={debt.id} className="debt-item">
+                    <div className="debt-item-header">
+                      <div className="debt-item-person">
+                        <div className="debt-avatar">
+                          {creditorInfo.initials}
                         </div>
-                        <div className={styles.debtNickname}>@{debt.creditor?.nickname}</div>
-                        <div className={styles.debtDesc}>{debt.description}</div>
-                        {hasInstallments && (
-                          <div className={styles.installmentsBadge}>
-                            🔄 {debt.installments} cuotas de {formatCurrency(debt.installment_amount || debt.amount / debt.installments)}
-                          </div>
-                        )}
-                        {debt.due_date && (
-                          <div className={`${styles.dueDateBadge} ${isOverdue(debt.due_date) && debt.status !== 'paid' ? styles.overdue : ''}`}>
-                            📅 Vence: {formatDate(debt.due_date)}
-                          </div>
-                        )}
+                        <div className="debt-person-info">
+                          <h3>{creditorInfo.name}</h3>
+                          <div className="debt-person-nickname">@{creditorInfo.nickname}</div>
+                        </div>
                       </div>
+                      <div className="debt-amount-main">{debt.currency_symbol || '$'}{debt.amount.toLocaleString('es-AR')}</div>
                     </div>
-                    <div className={styles.debtRight}>
-                      <div className={styles.debtAmount}>{debt.currency_symbol || '$'}{debt.amount.toLocaleString('es-AR')}</div>
-                      <span className={`${styles.statusBadge} ${styles[status.class]}`}>
-                        {status.label}
-                      </span>
-                      <div className={styles.debtActions}>
-                        {hasInstallments && (
-                          <Button size="sm" variant="ghost" onClick={() => handleViewDebtDetail(debt)}>
-                            📋 Ver Cuotas
-                          </Button>
-                        )}
-                        {debt.status === 'accepted' && (
-                          isVirtualDebt ? (
-                            <Button 
-                              size="sm" 
-                              variant={debt.status === 'paid' ? "warning" : "success"}
-                              onClick={() => handleMarkPaid(debt)}
-                            >
-                              {debt.status === 'paid' ? '🔄 No pagó' : '💰 Pagué'}
-                            </Button>
-                          ) : (
-                            <Button 
-                              size="sm" 
-                              variant="primary"
-                              onClick={() => handleRequestPaymentConfirmation(debt)}
-                              disabled={confirmingPayment === debt.id}
-                            >
-                              {confirmingPayment === debt.id ? '⏳' : '📨 Pagué'}
-                            </Button>
-                          )
-                        )}
+                    <div className="debt-item-body">
+                      <div className="debt-info-row">
+                        <span className="debt-info-label">Descripción:</span>
+                        <span className="debt-info-value">{debt.description}</span>
                       </div>
+                      <div className="debt-info-row">
+                        <span className="debt-info-label">Estado:</span>
+                        <span className={`debt-status-badge status-${status.class}`}>{status.label}</span>
+                      </div>
+                      {hasInstallments && (
+                        <div className="debt-info-row">
+                          <span className="debt-info-label">Cuotas:</span>
+                          <span className="badge-installment-primary">
+                            <RefreshCw size={14} />
+                            {debt.installments} cuotas de {formatCurrency(debt.installment_amount || debt.amount / debt.installments)}
+                          </span>
+                        </div>
+                      )}
+                      {debt.due_date && (
+                        <div className="debt-info-row">
+                          <span className="debt-info-label">Vencimiento:</span>
+                          <span className={isOverdue(debt.due_date) && debt.status !== 'paid' ? "badge-due-date-overdue" : "badge-due-date-normal"}>
+                            <Calendar size={14} />
+                            {formatDate(debt.due_date)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="debt-item-actions">
+                      {hasInstallments && (
+                        <button className="debt-action-btn" onClick={() => handleViewDebtDetail(debt)}>
+                          <Eye size={16} /> Ver Cuotas
+                        </button>
+                      )}
+                      {/* Botón para deudas virtuales */}
+                      {isVirtualDebt && debt.status !== 'rejected' && (
+                        <button 
+                          className={`debt-action-btn ${debt.status === 'paid' ? 'btn-paid' : 'btn-success'}`}
+                          onClick={() => handleMarkPaid(debt)}
+                        >
+                          {debt.status === 'paid' ? <><CheckCircle size={16} /> Pagado ✓</> : <><DollarSign size={16} /> Marcar Pagado</>}
+                        </button>
+                      )}
+                      {/* Botón para deudas con usuarios reales */}
+                      {!isVirtualDebt && debt.status === 'accepted' && (
+                        <button 
+                          className={`debt-action-btn ${debt.paid_by_creditor ? 'btn-paid' : 'btn-primary'}`}
+                          onClick={() => handleRequestPaymentConfirmation(debt)}
+                          disabled={confirmingPayment === debt.id || debt.paid_by_creditor}
+                        >
+                          {debt.paid_by_creditor 
+                            ? <><CheckCircle size={16} /> Pagado ✓</>
+                            : <><Send size={16} /> {confirmingPayment === debt.id ? 'Enviando...' : 'Notificar Pago'}</>}
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -863,7 +935,7 @@ const Debts = () => {
             </div>
           ) : (
             <EmptyState
-              icon="✅"
+              icon={<CheckCircle size={48} color="#10b981" />}
               title="No debes nada"
               description="No tienes deudas activas"
             />
@@ -872,81 +944,98 @@ const Debts = () => {
 
         {activeTab === 'owed' && (
           debtsAsCreditor.length > 0 ? (
-            <div className={styles.debtsList}>
+            <div className="debts-list">
               {filterAndSortDebts(debtsAsCreditor).map((debt) => {
                 const status = getStatusBadge(debt.status);
                 const hasInstallments = debt.installments > 1;
                 const paidInstallments = debt.paid_installments || 0;
                 const isOverdueDebt = debt.due_date && isOverdue(debt.due_date) && debt.status !== 'paid';
+                const debtorInfo = getPersonInfo(debt, 'debtor');
                 
                 return (
-                  <div key={debt.id} className={styles.debtItem}>
-                    <div className={styles.debtInfo}>
-                      <div className={styles.debtAvatar}>
-                        {debt.debtor?.first_name?.[0]}{debt.debtor?.last_name?.[0]}
-                      </div>
-                      <div>
-                        <div className={styles.debtName}>
-                          {debt.debtor?.first_name} {debt.debtor?.last_name}
+                  <div key={debt.id} className="debt-item">
+                    <div className="debt-item-header">
+                      <div className="debt-item-person">
+                        <div className="debt-avatar">
+                          {debtorInfo.initials}
                         </div>
-                        <div className={styles.debtNickname}>@{debt.debtor?.nickname}</div>
-                        <div className={styles.debtDesc}>{debt.description}</div>
-                        {hasInstallments && (
-                          <>
-                            <div className={styles.installmentsBadge}>
-                              🔄 {debt.installments} cuotas de {formatCurrency(debt.installment_amount || debt.amount / debt.installments)}
-                            </div>
-                            <div className={styles.installmentsStatus}>
-                              {paidInstallments > 0 && (
-                                <span className={styles.paidBadge}>
-                                  ✅ {paidInstallments}/{debt.installments} pagadas
-                                </span>
-                              )}
-                              {isOverdueDebt && (
-                                <span className={styles.overdueBadge}>
-                                  ⚠️ Vencida - Cobrar
-                                </span>
-                              )}
-                            </div>
-                          </>
-                        )}
-                        {debt.due_date && (
-                          <div className={`${styles.dueDateBadge} ${isOverdueDebt ? styles.overdue : ''}`}>
-                            📅 Vence: {formatDate(debt.due_date)}
-                          </div>
-                        )}
+                        <div className="debt-person-info">
+                          <h3>{debtorInfo.name}</h3>
+                          <div className="debt-person-nickname">@{debtorInfo.nickname}</div>
+                        </div>
                       </div>
+                      <div className="debt-amount-main">{debt.currency_symbol || '$'}{debt.amount.toLocaleString('es-AR')}</div>
                     </div>
-                    <div className={styles.debtRight}>
-                      <div className={styles.debtAmount}>{debt.currency_symbol || '$'}{debt.amount.toLocaleString('es-AR')}</div>
-                      <span className={`${styles.statusBadge} ${styles[status.class]}`}>
-                        {status.label}
-                      </span>
-                      <div className={styles.debtActions}>
-                        {hasInstallments && (
-                          <Button size="sm" variant="ghost" onClick={() => handleViewDebtDetail(debt)}>
-                            📋 Ver Cuotas
-                          </Button>
-                        )}
-                        {debt.status === 'accepted' && !debt.virtual_friend_id && (
-                          <Button 
-                            size="sm" 
-                            variant="info"
-                            onClick={() => handleCollect(debt)}
-                          >
-                            💰 Cobrar
-                          </Button>
-                        )}
-                        {debt.status === 'accepted' && (
-                          <Button 
-                            size="sm" 
-                            variant={debt.paid_by_creditor ? "warning" : "success"}
-                            onClick={() => handleMarkAsPaid(debt)}
-                          >
-                            {debt.paid_by_creditor ? '🔄 Revertir' : '✅ Pagó'}
-                          </Button>
-                        )}
+                    <div className="debt-item-body">
+                      <div className="debt-info-row">
+                        <span className="debt-info-label">Descripción:</span>
+                        <span className="debt-info-value">{debt.description}</span>
                       </div>
+                      <div className="debt-info-row">
+                        <span className="debt-info-label">Estado:</span>
+                        <span className={`debt-status-badge status-${status.class}`}>{status.label}</span>
+                      </div>
+                      {hasInstallments && (
+                        <>
+                          <div className="debt-info-row">
+                            <span className="debt-info-label">Cuotas:</span>
+                            <span className="badge-installment-success">
+                              <RefreshCw size={14} />
+                              {debt.installments} cuotas de {formatCurrency(debt.installment_amount || debt.amount / debt.installments)}
+                            </span>
+                          </div>
+                          {paidInstallments > 0 && (
+                            <div className="debt-info-row">
+                              <span className="debt-info-label">Progreso:</span>
+                              <span className="badge-paid-count">
+                                <CheckCircle size={14} />
+                                {paidInstallments}/{debt.installments} pagadas
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      )}
+                      {debt.due_date && (
+                        <div className="debt-info-row">
+                          <span className="debt-info-label">Vencimiento:</span>
+                          <span className={isOverdueDebt ? "badge-due-date-overdue" : "badge-due-date-normal"}>
+                            <Calendar size={14} />
+                            {formatDate(debt.due_date)}
+                          </span>
+                        </div>
+                      )}
+                      {isOverdueDebt && (
+                        <div className="debt-info-row">
+                          <span className="badge-overdue-alert">
+                            <AlertCircle size={14} />
+                            Deuda vencida - Requiere atención
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="debt-item-actions">
+                      {hasInstallments && (
+                        <button className="debt-action-btn" onClick={() => handleViewDebtDetail(debt)}>
+                          <Eye size={16} /> Ver Cuotas
+                        </button>
+                      )}
+                      {/* Botón Cobrar - solo para deudas con usuarios reales y no pagadas */}
+                      {debt.status === 'accepted' && !debt.virtual_friend_id && !debt.paid_by_creditor && debt.status !== 'paid' && (
+                        <button className="debt-action-btn btn-info" onClick={() => handleCollect(debt)}>
+                          <Bell size={16} /> Recordar Pago
+                        </button>
+                      )}
+                      {/* Botón Marcar Pagado - cambia de color según estado */}
+                      {(debt.status === 'accepted' || debt.status === 'paid') && (
+                        <button 
+                          className={`debt-action-btn ${debt.paid_by_creditor || debt.status === 'paid' ? 'btn-paid' : 'btn-success'}`}
+                          onClick={() => handleMarkAsPaid(debt)}
+                        >
+                          {debt.paid_by_creditor || debt.status === 'paid' 
+                            ? <><CheckCircle size={16} /> Pagado ✓</> 
+                            : <><DollarSign size={16} /> Marcar Pagado</>}
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -954,7 +1043,7 @@ const Debts = () => {
             </div>
           ) : (
             <EmptyState
-              icon="💰"
+              icon={<DollarSign size={48} />}
               title="Nadie te debe"
               description="No tienes deudas a cobrar"
               action="Crear deuda"
@@ -971,12 +1060,12 @@ const Debts = () => {
         title="Nueva Deuda"
         size="md"
       >
-        <form className={styles.form} onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit}>
           {/* Selector de dirección de deuda */}
-          <div className={styles.debtDirectionSelector}>
-            <label className={styles.label}>Tipo de deuda</label>
-            <div className={styles.radioGroup}>
-              <label className={styles.radioLabel}>
+          <div className="debts-form-group">
+            <label className="debts-form-label">Tipo de deuda</label>
+            <div className="debts-direction-options">
+              <label className="debts-radio-option">
                 <input
                   type="radio"
                   name="debtDirection"
@@ -984,9 +1073,12 @@ const Debts = () => {
                   checked={formData.debtDirection === 'owed_to_me'}
                   onChange={handleChange}
                 />
-                <span>💰 Me deben (alguien me debe dinero)</span>
+                <span className="debts-radio-content">
+                  <TrendingUp size={20} />
+                  <span>Me deben (alguien me debe dinero)</span>
+                </span>
               </label>
-              <label className={styles.radioLabel}>
+              <label className="debts-radio-option">
                 <input
                   type="radio"
                   name="debtDirection"
@@ -994,18 +1086,21 @@ const Debts = () => {
                   checked={formData.debtDirection === 'i_owe'}
                   onChange={handleChange}
                 />
-                <span>💸 Yo debo (le debo dinero a alguien)</span>
+                <span className="debts-radio-content">
+                  <TrendingDown size={20} />
+                  <span>Yo debo (le debo dinero a alguien)</span>
+                </span>
               </label>
             </div>
           </div>
 
           {/* Selector de amigos (reales + virtuales) */}
-          <div className={styles.friendSelector}>
-            <label className={styles.label}>
+          <div className="debts-form-group">
+            <label className="debts-form-label">
               {formData.debtDirection === 'i_owe' ? '¿A quién le debes?' : '¿Quién te debe?'}
             </label>
             
-            <div className={styles.selectWithButton}>
+            <div className="debts-select-with-button">
               <select
                 name="friendId"
                 value={formData.friendType === 'virtual' ? `virtual_${formData.friendId}` : formData.friendId}
@@ -1022,13 +1117,13 @@ const Debts = () => {
                     friendType: isVirtual ? 'virtual' : 'real'
                   }));
                 }}
-                className={styles.select}
+                className="debts-form-select"
                 required
               >
                 <option value="">Selecciona un amigo</option>
                 
                 {friends && friends.length > 0 && (
-                  <optgroup label="👥 Amigos con cuenta">
+                  <optgroup label="Amigos con cuenta">
                     {friends.map(f => (
                       <option key={`friend-${f.friendshipId || f.friend?.id}`} value={f.friend?.id}>
                         {f.friend?.first_name || 'Sin nombre'} {f.friend?.last_name || ''} (@{f.friend?.nickname || 'usuario'})
@@ -1038,10 +1133,10 @@ const Debts = () => {
                 )}
                 
                 {virtualFriends && virtualFriends.length > 0 && (
-                  <optgroup label="📇 Mis contactos">
+                  <optgroup label="Mis contactos">
                     {virtualFriends.map(vf => (
                       <option key={vf.id} value={`virtual_${vf.id}`}>
-                        {vf.name} {vf.phone ? `(${vf.phone})` : ''} ⭐
+                        {vf.name} {vf.phone ? `(${vf.phone})` : ''}
                       </option>
                     ))}
                   </optgroup>
@@ -1050,18 +1145,18 @@ const Debts = () => {
               
               <button
                 type="button"
-                className={styles.addFriendBtn}
+                className="debts-add-friend-btn"
                 onClick={openNewFriendModal}
                 title="Agregar nuevo amigo"
               >
-                ➕
+                <UserPlus size={20} />
               </button>
             </div>
             
             {/* Mensaje si no hay amigos */}
             {(!friends || friends.length === 0) && (!virtualFriends || virtualFriends.length === 0) && (
-              <p className={styles.noFriendsHint}>
-                No tienes amigos agregados. <button type="button" onClick={openNewFriendModal} className={styles.linkBtn}>Agrega uno</button>
+              <p className="debts-no-friends-hint">
+                No tienes amigos agregados. <button type="button" onClick={openNewFriendModal} className="debts-link-btn">Agrega uno</button>
               </p>
             )}
           </div>
@@ -1073,7 +1168,7 @@ const Debts = () => {
             placeholder="0.00"
             value={formData.amount}
             onChange={handleChange}
-            icon="💰"
+            icon={<DollarSign size={18} />}
             required
           />
 
@@ -1087,7 +1182,7 @@ const Debts = () => {
           {/* Campo de cuenta bancaria solo si "yo debo" */}
           {formData.debtDirection === 'i_owe' && (
             <div>
-              <div className={styles.selectWithButton}>
+              <div className="debts-select-with-button">
                 <Select
                   label="Cuenta Bancaria (opcional)"
                   name="bank_account_id"
@@ -1105,16 +1200,16 @@ const Debts = () => {
                 />
                 <button
                   type="button"
-                  className={styles.addBankBtn}
+                  className="debts-add-bank-btn"
                   onClick={() => setShowCreateBankModal(true)}
                   title="Crear nueva cuenta bancaria"
                 >
-                  🏦 ➕
+                  <Building2 size={18} />
                 </button>
               </div>
               {bankAccounts.filter(acc => acc.currency === formData.currency).length === 0 && (
-                <p className={styles.hint}>
-                  No tienes cuentas en {formData.currency}. <button type="button" onClick={() => setShowCreateBankModal(true)} className={styles.linkBtn}>Crea una aquí</button>
+                <p className="debts-hint">
+                  No tienes cuentas en {formData.currency}. <button type="button" onClick={() => setShowCreateBankModal(true)} className="debts-link-btn">Crea una aquí</button>
                 </p>
               )}
             </div>
@@ -1130,16 +1225,16 @@ const Debts = () => {
           />
 
           {/* Cuotas */}
-          <div className={styles.installmentsSection}>
-            <label className={styles.label}>Número de cuotas</label>
+          <div className="debts-installments-section">
+            <label className="debts-form-label">Número de cuotas</label>
             
             {/* Botones de cuotas predeterminadas */}
-            <div className={styles.installmentButtons}>
+            <div className="debts-installment-buttons">
               {[1, 3, 6, 12].map(count => (
                 <button
                   key={count}
                   type="button"
-                  className={`${styles.installmentBtn} ${formData.installments === count ? styles.active : ''}`}
+                  className={`debts-installment-btn ${formData.installments === count ? 'active' : ''}`}
                   onClick={() => setFormData(prev => ({ ...prev, installments: count }))}
                 >
                   {count} {count === 1 ? 'cuota' : 'cuotas'}
@@ -1148,14 +1243,14 @@ const Debts = () => {
             </div>
             
             {/* Input personalizado */}
-            <div className={styles.customInstallmentInput}>
-              <label className={styles.smallLabel}>O ingresa un número personalizado:</label>
+            <div className="debts-custom-installment-input">
+              <label className="debts-small-label">O ingresa un número personalizado:</label>
               <input
                 type="number"
                 min="1"
                 max="48"
                 placeholder="Ej: 18"
-                className={styles.numberInput}
+                className="debts-number-input"
                 value={formData.installments > 12 || ![1, 3, 6, 12].includes(formData.installments) ? String(formData.installments) : ''}
                 onChange={(e) => {
                   const value = e.target.value === '' ? 1 : parseInt(e.target.value);
@@ -1167,14 +1262,14 @@ const Debts = () => {
             </div>
             
             {formData.installments > 1 && formData.amount && (
-              <p className={styles.installmentHint}>
+              <p className="debts-hint">
                 {formData.installments} cuotas de {currency}{(parseFloat(formData.amount || 0) / formData.installments).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             )}
           </div>
 
           {/* Fechas */}
-          <div className={styles.datesSection}>
+          <div>
             <Input
               label="Fecha de compra (opcional)"
               type="date"
@@ -1194,7 +1289,7 @@ const Debts = () => {
             />
           </div>
 
-          <div className={styles.formActions}>
+          <div className="debts-form-actions">
             <Button type="button" variant="secondary" onClick={() => setShowModal(false)}>
               Cancelar
             </Button>
@@ -1212,31 +1307,31 @@ const Debts = () => {
         title={newFriendType === null ? "Nuevo Contacto" : (newFriendType === 'virtual' ? "Nuevo Contacto Ficticio" : "Buscar Amigo Real")}
         size="sm"
       >
-        <div className={styles.virtualFriendForm}>
+        <div>
           {/* Paso 1: Seleccionar tipo */}
           {newFriendType === null && (
             <>
-              <p className={styles.formHint}>
+              <p className="debts-hint">
                 ¿Qué tipo de contacto quieres agregar?
               </p>
-              <div className={styles.friendTypeButtons}>
+              <div>
                 <button
                   type="button"
-                  className={styles.friendTypeBtn}
+                  className="debts-friend-type-btn"
                   onClick={() => setNewFriendType('virtual')}
                 >
-                  <span className={styles.friendTypeIcon}>📇</span>
-                  <span className={styles.friendTypeLabel}>Contacto Ficticio</span>
-                  <span className={styles.friendTypeDesc}>Para personas sin cuenta en la app</span>
+                  <span className="debts-friend-type-icon"><FileText size={24} /></span>
+                  <span className="debts-friend-type-label">Contacto Ficticio</span>
+                  <span className="debts-friend-type-desc">Para personas sin cuenta en la app</span>
                 </button>
                 <button
                   type="button"
-                  className={styles.friendTypeBtn}
+                  className="debts-friend-type-btn"
                   onClick={() => setNewFriendType('real')}
                 >
-                  <span className={styles.friendTypeIcon}>👤</span>
-                  <span className={styles.friendTypeLabel}>Amigo Real</span>
-                  <span className={styles.friendTypeDesc}>Buscar por nickname de usuario</span>
+                  <span className="debts-friend-type-icon">👤</span>
+                  <span className="debts-friend-type-label">Amigo Real</span>
+                  <span className="debts-friend-type-desc">Buscar por nickname de usuario</span>
                 </button>
               </div>
             </>
@@ -1245,7 +1340,7 @@ const Debts = () => {
           {/* Paso 2a: Crear contacto ficticio */}
           {newFriendType === 'virtual' && (
             <>
-              <p className={styles.formHint}>
+              <p className="debts-hint">
                 Crea un contacto para personas que no tienen cuenta en la app.
               </p>
               <Input
@@ -1268,7 +1363,7 @@ const Debts = () => {
                 value={newVirtualFriend.email}
                 onChange={(e) => setNewVirtualFriend(prev => ({ ...prev, email: e.target.value }))}
               />
-              <div className={styles.formActions}>
+              <div className="debts-form-actions">
                 <Button 
                   type="button" 
                   variant="secondary" 
@@ -1286,10 +1381,10 @@ const Debts = () => {
           {/* Paso 2b: Buscar amigo real */}
           {newFriendType === 'real' && (
             <>
-              <p className={styles.formHint}>
+              <p className="debts-hint">
                 Los amigos reales deben agregarse desde la sección de Amigos.
               </p>
-              <div className={styles.formActions}>
+              <div className="debts-form-actions">
                 <Button 
                   type="button" 
                   variant="secondary" 
@@ -1318,33 +1413,33 @@ const Debts = () => {
         size="md"
       >
         {selectedDebt && (
-          <div className={styles.debtDetail}>
-            <div className={styles.debtDetailHeader}>
-              <h3>{selectedDebt.description}</h3>
-              <div className={styles.debtDetailAmount}>
+          <div>
+            <div className="debts-detail-header">
+              <h3 className="debts-detail-title">{selectedDebt.description}</h3>
+              <div className="debts-detail-amount">
                 {formatCurrency(selectedDebt.amount)}
               </div>
             </div>
 
-            <div className={styles.debtDetailInfo}>
+            <div className="debts-detail-section">
               {selectedDebt.purchase_date && (
-                <div className={styles.detailRow}>
-                  <span className={styles.detailLabel}>🛒 Fecha de compra:</span>
-                  <span className={styles.detailValue}>{formatDate(selectedDebt.purchase_date)}</span>
+                <div className="debt-detail-info-item">
+                  <span><Wallet size={18} />Fecha de compra:</span>
+                  <span className="debt-info-value">{formatDate(selectedDebt.purchase_date)}</span>
                 </div>
               )}
               {selectedDebt.due_date && (
-                <div className={styles.detailRow}>
-                  <span className={styles.detailLabel}>📅 Primer vencimiento:</span>
-                  <span className={`${styles.detailValue} ${isOverdue(selectedDebt.due_date) && selectedDebt.status !== 'paid' ? styles.overdue : ''}`}>
+                <div className="debt-detail-info-item">
+                  <span><Calendar size={18} />Primer vencimiento:</span>
+                  <span className={`debt-info-value ${isOverdue(selectedDebt.due_date) && selectedDebt.status !== 'paid' ? 'overdue' : ''}`}>
                     {formatDate(selectedDebt.due_date)}
                   </span>
                 </div>
               )}
               {selectedDebt.installments > 1 && (
-                <div className={styles.detailRow}>
-                  <span className={styles.detailLabel}>🔄 Cuotas:</span>
-                  <span className={styles.detailValue}>
+                <div className="debt-detail-info-item">
+                  <span><RefreshCw size={18} />Cuotas:</span>
+                  <span className="debt-info-value">
                     {selectedDebt.installments} cuotas de {formatCurrency(selectedDebt.installment_amount || selectedDebt.amount / selectedDebt.installments)}
                   </span>
                 </div>
@@ -1353,8 +1448,8 @@ const Debts = () => {
 
             {/* Lista de cuotas */}
             {selectedDebt.installments > 1 && (
-              <div className={styles.installmentsList}>
-                <h4 className={styles.installmentsTitle}>📋 Plan de pagos</h4>
+              <div className="debts-detail-section">
+                <h4 className="debts-detail-section-title"><FileText size={20} />Plan de pagos</h4>
                 
                 {loadingInstallments ? (
                   <Loading size="sm" text="Cargando cuotas..." />
@@ -1362,42 +1457,47 @@ const Debts = () => {
                   debtInstallments.map((inst) => {
                     const isInstOverdue = isOverdue(inst.due_date) && !inst.paid;
                     return (
-                      <div 
-                        key={inst.id} 
-                        className={`${styles.installmentItem} ${inst.paid ? styles.paid : ''} ${isInstOverdue ? styles.overdue : ''}`}
-                      >
-                        <div className={styles.installmentInfo}>
-                          <span className={styles.installmentNumber}>
+                      <div key={inst.id} className="debts-installment-item">
+                        <div className="debts-installment-info">
+                          <span className="debts-installment-number">
                             Cuota {inst.installment_number}/{selectedDebt.installments}
                           </span>
-                          <span className={styles.installmentDueDate}>
+                          <span className="debts-installment-due">
                             Vence: {formatDate(inst.due_date)}
                           </span>
                         </div>
-                        <div className={styles.installmentAmount}>
+                        <div className="debts-installment-amount">
                           {formatCurrency(inst.amount)}
                         </div>
-                        <span className={`${styles.installmentStatus} ${inst.paid ? styles.paid : isInstOverdue ? styles.overdue : styles.pending}`}>
-                          {inst.paid ? '✅ Pagada' : isInstOverdue ? '⚠️ Vencida' : '⏳ Pendiente'}
+                        <span className={`debts-installment-status ${inst.paid ? 'paid' : isInstOverdue ? 'overdue' : 'pending'}`}>
+                          {inst.paid ? (
+                            <><CheckCircle size={14} /> Pagada</>
+                          ) : isInstOverdue ? (
+                            <><AlertCircle size={14} /> Vencida</>
+                          ) : (
+                            <><Clock size={14} /> Pendiente</>
+                          )}
                         </span>
-                        <div className={styles.installmentActions}>
+                        <div>
                           {!inst.paid && selectedDebt.creditor_id === user?.id && (
                             <Button 
                               size="sm" 
                               variant="success"
+                              icon={<CheckCircle size={16} />}
                               onClick={() => handleMarkInstallmentPaid(inst.id)}
                             >
-                              ✓ Pagar
+                              Pagar
                             </Button>
                           )}
                           {inst.paid && selectedDebt.creditor_id === user?.id && (
                             <Button 
                               size="sm" 
                               variant="warning"
+                              icon={<RefreshCw size={16} />}
                               onClick={() => handleRevertInstallmentPayment(inst.id)}
                               title="Revertir pago"
                             >
-                              ↺ Revertir
+                              Revertir
                             </Button>
                           )}
                         </div>
@@ -1405,14 +1505,14 @@ const Debts = () => {
                     );
                   })
                 ) : (
-                  <p className={styles.noInstallments}>
+                  <p className="debts-empty-message">
                     No se encontraron cuotas registradas para esta deuda.
                   </p>
                 )}
               </div>
             )}
 
-            <div className={styles.formActions}>
+            <div className="debts-form-actions">
               <Button variant="secondary" onClick={() => setShowDetailModal(false)}>
                 Cerrar
               </Button>
@@ -1425,9 +1525,9 @@ const Debts = () => {
       <Modal
         show={showCreateBankModal}
         onClose={() => setShowCreateBankModal(false)}
-        title="🏦 Crear Cuenta Bancaria"
+        title={<span className="debts-detail-section-title"><Building2 size={22} />Crear Cuenta Bancaria</span>}
       >
-        <form onSubmit={handleCreateBankAccount} className={styles.form}>
+        <form onSubmit={handleCreateBankAccount}>
           <Input
             label="Nombre de la cuenta"
             type="text"
@@ -1452,7 +1552,7 @@ const Debts = () => {
             onChange={(e) => setNewBankAccount(prev => ({ ...prev, initial_balance: e.target.value }))}
           />
 
-          <div className={styles.formActions}>
+          <div className="debts-form-actions">
             <Button type="button" variant="secondary" onClick={() => setShowCreateBankModal(false)}>
               Cancelar
             </Button>
@@ -1467,12 +1567,19 @@ const Debts = () => {
       <Modal
         show={showMarkPaidModal}
         onClose={() => setShowMarkPaidModal(false)}
-        title={debtToMarkPaid?.paid_by_creditor ? "🔄 Revertir Pago" : debtToMarkPaid?.status === 'paid' ? "🔄 Reactivar Deuda" : "✅ Marcar como Pagada"}
+        title={
+          <span className="debts-detail-section-title">
+            {debtToMarkPaid?.paid_by_creditor || debtToMarkPaid?.status === 'paid' 
+              ? <><RefreshCw size={22} />{debtToMarkPaid?.paid_by_creditor ? "Revertir Pago" : "Reactivar Deuda"}</>
+              : <><CheckCircle size={22} />Marcar como Pagada</>
+            }
+          </span>
+        }
       >
-        <div className={styles.confirmModal}>
+        <div className="debts-confirm-modal">
           {debtToMarkPaid && (
             <>
-              <p className={styles.confirmText}>
+              <p className="debts-confirm-text">
                 {debtToMarkPaid.paid_by_creditor 
                   ? `¿Revertir el pago de "${debtToMarkPaid.description}"?`
                   : debtToMarkPaid.status === 'paid'
@@ -1480,10 +1587,10 @@ const Debts = () => {
                   : `¿Confirmar que pagaste "${debtToMarkPaid.description}"?`
                 }
               </p>
-              <div className={styles.confirmAmount}>
+              <div className="debts-confirm-amount">
                 {debtToMarkPaid.currency_symbol}{debtToMarkPaid.amount.toLocaleString('es-AR')}
               </div>
-              <p className={styles.confirmNote}>
+              <p className="debts-confirm-note">
                 {debtToMarkPaid.paid_by_creditor 
                   ? 'La deuda volverá al estado "Aceptada".'
                   : debtToMarkPaid.status === 'paid'
@@ -1491,15 +1598,19 @@ const Debts = () => {
                   : 'Esta acción marcará la deuda como pagada. Si te equivocas, puedes revertirlo con el botón "No pagó".'
                 }
               </p>
-              <div className={styles.formActions}>
+              <div className="debts-form-actions">
                 <Button variant="secondary" onClick={() => setShowMarkPaidModal(false)}>
                   Cancelar
                 </Button>
                 <Button 
                   variant={debtToMarkPaid.paid_by_creditor || debtToMarkPaid.status === 'paid' ? "warning" : "success"}
                   onClick={debtToMarkPaid.paid_by_creditor ? confirmMarkAsPaid : confirmMarkPaidVirtual}
+                  icon={debtToMarkPaid.paid_by_creditor || debtToMarkPaid.status === 'paid' ? <RefreshCw size={16} /> : <CheckCircle size={16} />}
                 >
-                  {debtToMarkPaid.paid_by_creditor ? '🔄 Revertir' : debtToMarkPaid.status === 'paid' ? '🔄 Reactivar' : '✅ Confirmar'}
+                  {debtToMarkPaid.paid_by_creditor || debtToMarkPaid.status === 'paid'
+                    ? (debtToMarkPaid.paid_by_creditor ? 'Revertir' : 'Reactivar')
+                    : 'Confirmar'
+                  }
                 </Button>
               </div>
             </>
@@ -1511,36 +1622,36 @@ const Debts = () => {
       <Modal
         show={showCollectModal}
         onClose={() => setShowCollectModal(false)}
-        title="💰 Enviar Recordatorio de Pago"
+        title={<span className="debts-detail-section-title"><Bell size={22} />Enviar Recordatorio de Pago</span>}
       >
-        <div className={styles.confirmModal}>
+        <div className="debts-confirm-modal">
           {debtToCollect && (
             <>
-              <p className={styles.confirmText}>
+              <p className="debts-confirm-text">
                 ¿Enviar un recordatorio a {debtToCollect.debtor?.first_name} {debtToCollect.debtor?.last_name} para que pague esta deuda?
               </p>
-              <div className={styles.debtInfo}>
-                <div className={styles.debtInfoItem}>
-                  <span className={styles.label}>💳 Deuda:</span>
-                  <span className={styles.value}>{debtToCollect.description}</span>
+              <div className="debts-detail-section">
+                <div className="debt-detail-info-item">
+                  <span><CreditCard size={18} />Deuda:</span>
+                  <span className="debt-info-value">{debtToCollect.description}</span>
                 </div>
-                <div className={styles.debtInfoItem}>
-                  <span className={styles.label}>💰 Monto:</span>
-                  <span className={styles.value}>
+                <div className="debt-detail-info-item">
+                  <span><DollarSign size={18} />Monto:</span>
+                  <span className="debt-info-value">
                     {debtToCollect.currency_symbol}{debtToCollect.amount.toLocaleString('es-AR')}
                   </span>
                 </div>
                 {debtToCollect.due_date && (
-                  <div className={styles.debtInfoItem}>
-                    <span className={styles.label}>📅 Vencimiento:</span>
-                    <span className={styles.value}>{formatDate(debtToCollect.due_date)}</span>
+                  <div className="debt-detail-info-item">
+                    <span><Calendar size={18} />Vencimiento:</span>
+                    <span className="debt-info-value">{formatDate(debtToCollect.due_date)}</span>
                   </div>
                 )}
               </div>
-              <p className={styles.confirmNote}>
+              <p className="debts-confirm-note">
                 Se enviará una notificación amigable recordándole que tiene una deuda pendiente.
               </p>
-              <div className={styles.formActions}>
+              <div className="debts-form-actions">
                 <Button variant="secondary" onClick={() => setShowCollectModal(false)} disabled={collecting}>
                   Cancelar
                 </Button>
@@ -1548,8 +1659,9 @@ const Debts = () => {
                   variant="info"
                   onClick={confirmCollect}
                   disabled={collecting}
+                  icon={collecting ? <Clock size={16} /> : <Send size={16} />}
                 >
-                  {collecting ? '⏳ Enviando...' : '📨 Enviar Recordatorio'}
+                  {collecting ? 'Enviando...' : 'Enviar Recordatorio'}
                 </Button>
               </div>
             </>

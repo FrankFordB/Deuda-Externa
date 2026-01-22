@@ -263,6 +263,28 @@
   gap: var(--spacing-xs);
 }
 
+.itemActions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.deleteBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  opacity: 0.6;
+  transition: all 0.2s ease;
+  font-size: 1rem;
+}
+
+.deleteBtn:hover {
+  opacity: 1;
+  background: var(--danger-bg);
+}
+
 .itemAmount {
   font-size: var(--font-xl);
   font-weight: 700;
@@ -369,6 +391,15 @@
 }
 
 .debtInfo {
+  background: var(--background-secondary);
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.expenseInfo {
   background: var(--background-secondary);
   border-radius: var(--border-radius-md);
   padding: var(--spacing-md);

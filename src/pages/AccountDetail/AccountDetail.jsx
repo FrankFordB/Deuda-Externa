@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth, useUI } from '../../context';
 import { bankAccountsService } from '../../services';
+import { deleteExpense } from '../../services/expensesService';
 import { supabase } from '../../services/supabase';
 import { Card, Button, Select, StatCard, Loading, EmptyState, EditAccountModal, Modal, CURRENCIES } from '../../components';
 import styles from './AccountDetail.module.css';
@@ -36,6 +37,11 @@ const AccountDetail = () => {
   const [showCollectModal, setShowCollectModal] = useState(false);
   const [debtToCollect, setDebtToCollect] = useState(null);
   const [collecting, setCollecting] = useState(false);
+  
+  // Modal para borrar gasto
+  const [showDeleteExpenseModal, setShowDeleteExpenseModal] = useState(false);
+  const [expenseToDelete, setExpenseToDelete] = useState(null);
+  const [deletingExpense, setDeletingExpense] = useState(false);
   
   const currentDate = new Date();
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
@@ -242,6 +248,35 @@ const AccountDetail = () => {
     }
   };
 
+  // Borrar gasto
+  const handleDeleteExpense = (expense) => {
+    setExpenseToDelete(expense);
+    setShowDeleteExpenseModal(true);
+  };
+
+  const confirmDeleteExpense = async () => {
+    if (!expenseToDelete || deletingExpense) return;
+    
+    setDeletingExpense(true);
+    
+    try {
+      const result = await deleteExpense(expenseToDelete.id);
+      
+      if (!result.error) {
+        showSuccess('Gasto eliminado correctamente');
+        setShowDeleteExpenseModal(false);
+        setExpenseToDelete(null);
+        loadAccountData(); // Recargar datos
+      } else {
+        showError('Error al eliminar gasto: ' + result.error);
+      }
+    } catch (error) {
+      showError('Error al eliminar gasto');
+    } finally {
+      setDeletingExpense(false);
+    }
+  };
+
   if (loading || !account) {
     return <Loading />;
   }
@@ -416,9 +451,18 @@ const AccountDetail = () => {
                       <div className={styles.itemAmount}>
                         {account.currency_symbol}{expense.amount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                       </div>
-                      <span className={`${styles.statusBadge} ${expense.is_paid ? styles.paid : styles.pending}`}>
-                        {expense.is_paid ? '✅ Pagado' : '⏳ Pendiente'}
-                      </span>
+                      <div className={styles.itemActions}>
+                        <span className={`${styles.statusBadge} ${expense.is_paid ? styles.paid : styles.pending}`}>
+                          {expense.is_paid ? '✅ Pagado' : '⏳ Pendiente'}
+                        </span>
+                        <button 
+                          className={styles.deleteBtn}
+                          onClick={() => handleDeleteExpense(expense)}
+                          title="Eliminar gasto"
+                        >
+                          🗑️
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -621,6 +665,58 @@ const AccountDetail = () => {
         onSave={handleSaveAccount}
         onDelete={handleDeleteAccount}
       />
+
+      {/* Modal para borrar gasto */}
+      <Modal
+        isOpen={showDeleteExpenseModal}
+        onClose={() => { setShowDeleteExpenseModal(false); setExpenseToDelete(null); }}
+        title="🗑️ Eliminar Gasto"
+      >
+        <div className={styles.modalContent}>
+          {expenseToDelete && (
+            <>
+              <p className={styles.confirmText}>
+                ¿Estás seguro de que deseas eliminar este gasto?
+              </p>
+              <div className={styles.expenseInfo}>
+                <div className={styles.debtInfoItem}>
+                  <span className={styles.label}>📝 Descripción:</span>
+                  <span className={styles.value}>{expenseToDelete.description}</span>
+                </div>
+                <div className={styles.debtInfoItem}>
+                  <span className={styles.label}>💰 Monto:</span>
+                  <span className={styles.value}>
+                    {account.currency_symbol}{expenseToDelete.amount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className={styles.debtInfoItem}>
+                  <span className={styles.label}>📅 Fecha:</span>
+                  <span className={styles.value}>{formatDate(expenseToDelete.date)}</span>
+                </div>
+              </div>
+              <p className={styles.confirmNote}>
+                Esta acción no se puede deshacer. El gasto se eliminará permanentemente.
+              </p>
+              <div className={styles.formActions}>
+                <Button 
+                  variant="secondary" 
+                  onClick={() => { setShowDeleteExpenseModal(false); setExpenseToDelete(null); }} 
+                  disabled={deletingExpense}
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  variant="danger"
+                  onClick={confirmDeleteExpense}
+                  disabled={deletingExpense}
+                >
+                  {deletingExpense ? '⏳ Eliminando...' : '🗑️ Eliminar Gasto'}
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 };

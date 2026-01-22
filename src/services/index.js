@@ -16,3 +16,4 @@ export { default as debtPaymentsService } from './debtPaymentsService';
 export { default as bankAccountsService } from './bankAccountsService';
 export { default as changeRequestsService } from './changeRequestsService';
 export { default as recurringExpensesService } from './recurringExpensesService';
+export { default as sharedExpensesService } from './sharedExpensesService';
