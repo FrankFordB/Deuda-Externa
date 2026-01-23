@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useFriends, useUI, useAuth } from '../../context';
-import { Button, Card, Input, Modal, Loading, EmptyState } from '../../components';
+import { Button, Card, Input, Modal, Loading, EmptyState, Avatar } from '../../components';
 import virtualFriendsService from '../../services/virtualFriendsService';
 import { 
   Users, UserPlus, Ghost, LayoutList, UserCheck, Inbox, 
@@ -268,13 +268,11 @@ const Friends = () => {
             <div className="friends-list">
               {friends.map(({ friendshipId, friend, since }) => (
                 <div key={friendshipId} className="friends-list-item">
-                  <div className="friends-avatar">
-                    {friend.avatar_url ? (
-                      <img src={friend.avatar_url} alt={friend.first_name} className="friends-avatar-img" />
-                    ) : (
-                      <>{friend.first_name?.[0]}{friend.last_name?.[0]}</>
-                    )}
-                  </div>
+                  <Avatar 
+                    src={friend.avatar_url}
+                    name={`${friend.first_name} ${friend.last_name}`}
+                    size="md"
+                  />
                   <div className="friends-info">
                     <div className="friends-name">
                       {friend.first_name} {friend.last_name}
@@ -363,13 +361,11 @@ const Friends = () => {
             <div className="friends-list">
               {friends.map(({ friendshipId, friend, since }) => (
                 <div key={friendshipId} className="friends-list-item">
-                  <div className="friends-avatar">
-                    {friend.avatar_url ? (
-                      <img src={friend.avatar_url} alt={friend.first_name} className="friends-avatar-img" />
-                    ) : (
-                      <>{friend.first_name?.[0]}{friend.last_name?.[0]}</>
-                    )}
-                  </div>
+                  <Avatar 
+                    src={friend.avatar_url}
+                    name={`${friend.first_name} ${friend.last_name}`}
+                    size="md"
+                  />
                   <div className="friends-info">
                     <div className="friends-name">
                       {friend.first_name} {friend.last_name}
@@ -475,13 +471,11 @@ const Friends = () => {
             <div className="friends-list">
               {pendingRequests.map((request) => (
                 <div key={request.id} className="friends-list-item">
-                  <div className="friends-avatar friends-avatar-accent">
-                    {request.user?.avatar_url ? (
-                      <img src={request.user.avatar_url} alt={request.user.first_name} className="friends-avatar-img" />
-                    ) : (
-                      <>{request.user?.first_name?.[0]}{request.user?.last_name?.[0]}</>
-                    )}
-                  </div>
+                  <Avatar 
+                    src={request.user?.avatar_url}
+                    name={`${request.user?.first_name || ''} ${request.user?.last_name || ''}`}
+                    size="md"
+                  />
                   <div className="friends-info">
                     <div className="friends-name">
                       {request.user?.first_name} {request.user?.last_name}
@@ -522,13 +516,11 @@ const Friends = () => {
             <div className="friends-list">
               {sentRequests.map((request) => (
                 <div key={request.id} className="friends-list-item">
-                  <div className="friends-avatar">
-                    {request.friend?.avatar_url ? (
-                      <img src={request.friend.avatar_url} alt={request.friend.first_name} className="friends-avatar-img" />
-                    ) : (
-                      <>{request.friend?.first_name?.[0]}{request.friend?.last_name?.[0]}</>
-                    )}
-                  </div>
+                  <Avatar 
+                    src={request.friend?.avatar_url}
+                    name={`${request.friend?.first_name || ''} ${request.friend?.last_name || ''}`}
+                    size="md"
+                  />
                   <div className="friends-info">
                     <div className="friends-name">
                       {request.friend?.first_name} {request.friend?.last_name}
@@ -595,13 +587,11 @@ const Friends = () => {
                 {searchResults.map((user) => (
                   <div key={user.id} className="friends-search-item">
                     <div className="friends-search-info">
-                      <div className="friends-search-avatar">
-                        {user.avatar_url ? (
-                          <img src={user.avatar_url} alt={user.first_name} className="friends-avatar-img" />
-                        ) : (
-                          <>{user.first_name?.[0]}{user.last_name?.[0]}</>
-                        )}
-                      </div>
+                      <Avatar 
+                        src={user.avatar_url}
+                        name={`${user.first_name || ''} ${user.last_name || ''}`}
+                        size="sm"
+                      />
                       <div>
                         <div className="friends-search-name">
                           {user.first_name} {user.last_name}

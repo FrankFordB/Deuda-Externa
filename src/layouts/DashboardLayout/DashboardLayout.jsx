@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink, Navigate, useLocation } from 'react-router-dom';
 import { useAuth, useUI, useFriends, useDebts, useNotifications } from '../../context';
-import { NotificationsPanel } from '../../components';
+import { NotificationsPanel, Avatar } from '../../components';
 import remindersService from '../../services/remindersService';
 import {
   LayoutDashboard,
@@ -246,15 +246,11 @@ const DashboardLayout = () => {
                   </div>
                   <div className={styles.userRole}>@{profile?.nickname}</div>
                 </div>
-                {profile?.avatar_url ? (
-                  <img 
-                    src={profile.avatar_url} 
-                    alt="Avatar" 
-                    className={styles.userAvatar}
-                  />
-                ) : (
-                  <div className="avatar">{getInitials()}</div>
-                )}
+                <Avatar 
+                  src={profile?.avatar_url}
+                  name={`${profile?.first_name || ''} ${profile?.last_name || ''}`}
+                  size="sm"
+                />
               </button>
 
               {userMenuOpen && (

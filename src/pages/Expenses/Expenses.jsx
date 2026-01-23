@@ -82,13 +82,18 @@ const Expenses = () => {
     loadVirtualFriends();
   }, [user]);
 
-  // Cargar cuentas bancarias
+  // Cargar cuentas bancarias y establecer default
   useEffect(() => {
     const loadBankAccounts = async () => {
       if (!user) return;
       const result = await bankAccountsService.getUserAccounts(user.id);
       if (!result.error) {
-        setBankAccounts(result.accounts || []);
+        const accounts = result.accounts || [];
+        setBankAccounts(accounts);
+        // Establecer la primera cuenta como default si no hay una seleccionada
+        if (accounts.length > 0 && !formData.bank_account_id) {
+          setFormData(prev => ({ ...prev, bank_account_id: accounts[0].id }));
+        }
       }
     };
     loadBankAccounts();
@@ -120,10 +125,15 @@ const Expenses = () => {
   const handleCurrencyChange = (e) => {
     const currencyCode = e.target.value;
     const selectedCurrency = CURRENCIES.find(c => c.value === currencyCode);
+    // Buscar la primera cuenta de esta moneda para auto-seleccionarla
+    const accountsInCurrency = bankAccounts.filter(acc => acc.currency === currencyCode);
+    const defaultAccountId = accountsInCurrency.length > 0 ? accountsInCurrency[0].id : '';
+    
     setFormData(prev => ({
       ...prev,
       currency: currencyCode,
-      currency_symbol: selectedCurrency?.symbol || '$'
+      currency_symbol: selectedCurrency?.symbol || '$',
+      bank_account_id: defaultAccountId
     }));
   };
 
@@ -474,19 +484,17 @@ const Expenses = () => {
           />
 
           <Select
-            label="Cuenta Bancaria"
+            label="Cuenta Bancaria *"
             name="bank_account_id"
-            options={[
-              { value: '', label: '-- Sin cuenta --' },
-              ...bankAccounts
-                .filter(acc => acc.currency === formData.currency)
-                .map(acc => ({
-                  value: acc.id,
-                  label: `${acc.currency_symbol} ${acc.name} (${acc.currency_symbol}${acc.current_balance})`
-                }))
-            ]}
+            options={bankAccounts
+              .filter(acc => acc.currency === formData.currency)
+              .map(acc => ({
+                value: acc.id,
+                label: `${acc.currency_symbol} ${acc.name} (${acc.currency_symbol}${acc.current_balance.toLocaleString('es-AR', { minimumFractionDigits: 2 })})`
+              }))}
             value={formData.bank_account_id}
             onChange={handleChange}
+            required
           />
 
           <Input

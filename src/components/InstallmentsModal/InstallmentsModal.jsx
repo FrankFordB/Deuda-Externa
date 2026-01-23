@@ -2,7 +2,7 @@
  * Installments Modal - Modal detallado de cuotas
  */
 import { useMemo } from 'react';
-import { Modal, Button } from '../';
+import { Modal, Button, Avatar } from '../';
 import styles from './InstallmentsModal.module.css';
 
 const InstallmentsModal = ({ isOpen, onClose, expense, siteConfig }) => {
@@ -56,9 +56,11 @@ const InstallmentsModal = ({ isOpen, onClose, expense, siteConfig }) => {
             <h3 className={styles.expenseName}>{expense.description}</h3>
             {expense.friend && (
               <div className={styles.friendBadge}>
-                {expense.friend.avatar_url && (
-                  <img src={expense.friend.avatar_url} alt={expense.friend.name} className={styles.friendAvatar} />
-                )}
+                <Avatar 
+                  src={expense.friend.avatar_url}
+                  name={expense.friend.name}
+                  size="xs"
+                />
                 <span>Le debo a: {expense.friend.name}</span>
               </div>
             )}

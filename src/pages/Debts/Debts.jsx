@@ -3,7 +3,7 @@
  */
 import { useState, useEffect } from 'react';
 import { useAuth, useDebts, useFriends, useUI, useNotifications } from '../../context';
-import { Button, Card, Input, Select, Modal, Loading, EmptyState, CurrencySelect, CURRENCIES } from '../../components';
+import { Button, Card, Input, Select, Modal, Loading, EmptyState, CurrencySelect, Avatar, CURRENCIES } from '../../components';
 import virtualFriendsService from '../../services/virtualFriendsService';
 import debtsService from '../../services/debtsService';
 import { createNotification } from '../../services/notificationsService';
@@ -132,14 +132,20 @@ const Debts = () => {
     loadVirtualFriends();
   }, [user]);
 
-  // Cargar cuentas bancarias
+  // Cargar cuentas bancarias y establecer default
   useEffect(() => {
     const loadBankAccounts = async () => {
       if (!user) return;
       const { bankAccountsService } = await import('../../services');
       const result = await bankAccountsService.getUserAccounts(user.id);
       if (!result.error) {
-        setBankAccounts(result.accounts || []);
+        const accounts = result.accounts || [];
+        setBankAccounts(accounts);
+        // Establecer la primera cuenta como default si no hay una seleccionada
+        if (accounts.length > 0 && !formData.bank_account_id) {
+          const defaultAccount = accounts.find(acc => acc.currency === formData.currency) || accounts[0];
+          setFormData(prev => ({ ...prev, bank_account_id: defaultAccount.id }));
+        }
       }
     };
     loadBankAccounts();
@@ -372,10 +378,15 @@ const Debts = () => {
   const handleCurrencyChange = (e) => {
     const currencyCode = e.target.value;
     const selectedCurrency = CURRENCIES.find(c => c.value === currencyCode);
+    // Buscar la primera cuenta de esta moneda para auto-seleccionarla
+    const accountsInCurrency = bankAccounts.filter(acc => acc.currency === currencyCode);
+    const defaultAccountId = accountsInCurrency.length > 0 ? accountsInCurrency[0].id : '';
+    
     setFormData(prev => ({
       ...prev,
       currency: currencyCode,
-      currency_symbol: selectedCurrency?.symbol || '$'
+      currency_symbol: selectedCurrency?.symbol || '$',
+      bank_account_id: defaultAccountId
     }));
   };
 
@@ -840,13 +851,11 @@ const Debts = () => {
                   <div key={debt.id} className="debt-item">
                     <div className="debt-item-header">
                       <div className="debt-item-person">
-                        <div className="debt-avatar">
-                          {creditorInfo.avatarUrl ? (
-                            <img src={creditorInfo.avatarUrl} alt={creditorInfo.name} className="debt-avatar-img" />
-                          ) : (
-                            creditorInfo.initials
-                          )}
-                        </div>
+                        <Avatar 
+                          src={creditorInfo.avatarUrl}
+                          name={creditorInfo.name}
+                          size="md"
+                        />
                         <div className="debt-person-info">
                           <h3>{creditorInfo.name}</h3>
                           <div className="debt-person-nickname">@{creditorInfo.nickname}</div>
@@ -908,9 +917,11 @@ const Debts = () => {
                   <div key={debt.id} className="debt-item">
                     <div className="debt-item-header">
                       <div className="debt-item-person">
-                        <div className="debt-avatar">
-                          {creditorInfo.initials}
-                        </div>
+                        <Avatar 
+                          src={creditorInfo.avatarUrl}
+                          name={creditorInfo.name}
+                          size="md"
+                        />
                         <div className="debt-person-info">
                           <h3>{creditorInfo.name}</h3>
                           <div className="debt-person-nickname">@{creditorInfo.nickname}</div>
@@ -1007,13 +1018,11 @@ const Debts = () => {
                   <div key={debt.id} className="debt-item">
                     <div className="debt-item-header">
                       <div className="debt-item-person">
-                        <div className="debt-avatar">
-                          {debtorInfo.avatarUrl ? (
-                            <img src={debtorInfo.avatarUrl} alt={debtorInfo.name} className="debt-avatar-img" />
-                          ) : (
-                            debtorInfo.initials
-                          )}
-                        </div>
+                        <Avatar 
+                          src={debtorInfo.avatarUrl}
+                          name={debtorInfo.name}
+                          size="md"
+                        />
                         <div className="debt-person-info">
                           <h3>{debtorInfo.name}</h3>
                           <div className="debt-person-nickname">@{debtorInfo.nickname}</div>
@@ -1245,19 +1254,17 @@ const Debts = () => {
             <div>
               <div className="debts-select-with-button">
                 <Select
-                  label="Cuenta Bancaria (opcional)"
+                  label="Cuenta Bancaria *"
                   name="bank_account_id"
-                  options={[
-                    { value: '', label: '-- Sin cuenta --' },
-                    ...bankAccounts
-                      .filter(acc => acc.currency === formData.currency)
-                      .map(acc => ({
-                        value: acc.id,
-                        label: `${acc.currency_symbol} ${acc.name} (${acc.currency_symbol}${acc.current_balance.toFixed(2)})`
-                      }))
-                  ]}
+                  options={bankAccounts
+                    .filter(acc => acc.currency === formData.currency)
+                    .map(acc => ({
+                      value: acc.id,
+                      label: `${acc.currency_symbol} ${acc.name} (${acc.currency_symbol}${acc.current_balance.toLocaleString('es-AR', { minimumFractionDigits: 2 })})`
+                    }))}
                   value={formData.bank_account_id}
                   onChange={handleChange}
+                  required
                 />
                 <button
                   type="button"
@@ -1603,7 +1610,7 @@ const Debts = () => {
 
       {/* Modal Crear Cuenta Bancaria */}
       <Modal
-        show={showCreateBankModal}
+        isOpen={showCreateBankModal}
         onClose={() => setShowCreateBankModal(false)}
         title={<span className="debts-detail-section-title"><Building2 size={22} />Crear Cuenta Bancaria</span>}
       >
@@ -1645,7 +1652,7 @@ const Debts = () => {
 
       {/* Modal Marcar como Pagada */}
       <Modal
-        show={showMarkPaidModal}
+        isOpen={showMarkPaidModal}
         onClose={() => setShowMarkPaidModal(false)}
         title={
           <span className="debts-detail-section-title">
@@ -1700,7 +1707,7 @@ const Debts = () => {
 
       {/* Modal Cobrar/Recordar */}
       <Modal
-        show={showCollectModal}
+        isOpen={showCollectModal}
         onClose={() => setShowCollectModal(false)}
         title={<span className="debts-detail-section-title"><Bell size={22} />Enviar Recordatorio de Pago</span>}
       >
@@ -1751,7 +1758,7 @@ const Debts = () => {
 
       {/* Modal Confirmar Reversión de Pago */}
       <Modal
-        show={showRevertModal}
+        isOpen={showRevertModal}
         onClose={() => {
           setShowRevertModal(false);
           setInstallmentToRevert(null);

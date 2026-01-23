@@ -3,6 +3,7 @@
  */
 export { default as Button } from './Button';
 export { default as Input } from './Input';
+export { default as NumberInput, formatNumberWithDots, parseFormattedNumber } from './NumberInput';
 export { default as Select } from './Select';
 export { default as Card } from './Card';
 export { default as Modal } from './Modal';
@@ -28,3 +29,5 @@ export { default as EditAccountModal } from './EditAccountModal';
 export { default as RequiredBankAccountModal } from './RequiredBankAccountModal';
 export { default as RecurringExpenseForm } from './RecurringExpenseForm';
 export { default as RecurringExpensesPanel } from './RecurringExpensesPanel';
+export { default as Avatar } from './Avatar';
+export { default as ImageCropper } from './ImageCropper';

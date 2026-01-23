@@ -32,6 +32,9 @@ const RecurringExpenseForm = ({
   onCancel,
   loading = false 
 }) => {
+  // Obtener cuenta por defecto (la primera disponible si no hay datos iniciales)
+  const defaultAccountId = initialData?.bank_account_id || (bankAccounts.length > 0 ? bankAccounts[0].id : '');
+  
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
     description: initialData?.description || '',
@@ -43,7 +46,7 @@ const RecurringExpenseForm = ({
     day_of_month: initialData?.day_of_month || 1,
     start_date: initialData?.start_date || new Date().toISOString().split('T')[0],
     end_date: initialData?.end_date || '',
-    bank_account_id: initialData?.bank_account_id || ''
+    bank_account_id: defaultAccountId
   });
 
   const handleChange = (e) => {
@@ -182,12 +185,12 @@ const RecurringExpenseForm = ({
 
       {bankAccounts.length > 0 && (
         <Select
-          label="Cuenta bancaria (opcional)"
+          label="Cuenta bancaria *"
           name="bank_account_id"
           value={formData.bank_account_id}
           onChange={handleChange}
+          required
           options={[
-            { value: '', label: 'Sin cuenta asociada' },
             ...bankAccounts.map(acc => ({
               value: acc.id,
               label: `${acc.name} (${acc.currency_symbol}${acc.current_balance.toFixed(2)})`

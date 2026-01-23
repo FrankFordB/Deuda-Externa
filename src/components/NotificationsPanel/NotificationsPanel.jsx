@@ -2,9 +2,10 @@
  * NotificationsPanel - Panel de notificaciones con pestañas y alertas
  */
 import { useState, useRef, useEffect } from 'react';
-import { useNotifications, useExpenses, useDebts, useAuth } from '../../context';
+import { useNotifications, useExpenses, useDebts, useAuth, useUI } from '../../context';
 import { markInstallmentAsPaid } from '../../services/debtsService';
-import { Coins, Banknote, CheckCircle, Users, CreditCard, Undo2, Bell } from 'lucide-react';
+import sharedExpensesService from '../../services/sharedExpensesService';
+import { Coins, Banknote, CheckCircle, Users, CreditCard, Undo2, Bell, Clock, AlertTriangle, Calendar, Trash2 } from 'lucide-react';
 import styles from './NotificationsPanel.module.css';
 
 const NotificationsPanel = () => {
@@ -21,6 +22,7 @@ const NotificationsPanel = () => {
   const { upcomingPayments: upcomingPaymentsData } = useExpenses();
   const { refreshDebts } = useDebts();
   const { user } = useAuth();
+  const { showSuccess, showError } = useUI();
   
   // Extraer el array de pagos del objeto
   const upcomingPayments = upcomingPaymentsData?.payments || [];
@@ -104,6 +106,32 @@ const NotificationsPanel = () => {
     }
   };
 
+  // Handler para aprobar/rechazar solicitudes de eliminación
+  const handleDeleteApproval = async (notification, approved) => {
+    setRespondingTo(notification.id);
+    
+    try {
+      if (approved) {
+        // Eliminar el gasto compartido
+        const result = await sharedExpensesService.deleteSharedExpense(notification.data.expense_id);
+        if (!result.error) {
+          showSuccess('Gasto eliminado correctamente');
+        } else {
+          showError('Error al eliminar el gasto');
+        }
+      } else {
+        // Rechazado - solo notificar
+        showSuccess('Has rechazado la eliminación del gasto');
+      }
+      await deleteNotification(notification.id);
+    } catch (error) {
+      console.error('Error procesando aprobación:', error);
+      showError('Error al procesar la solicitud');
+    } finally {
+      setRespondingTo(null);
+    }
+  };
+
   const getNotificationIcon = (type) => {
     switch (type) {
       case 'payment_confirmation':
@@ -120,6 +148,18 @@ const NotificationsPanel = () => {
         return <CheckCircle size={18} />;
       case 'installment_reverted':
         return <Undo2 size={18} />;
+      case 'payment_reminder':
+        return <Clock size={18} />;
+      case 'payment_due':
+        return <AlertTriangle size={18} />;
+      case 'collection_due':
+        return <Coins size={18} />;
+      case 'expense_due':
+        return <Calendar size={18} />;
+      case 'installment_due':
+        return <Calendar size={18} />;
+      case 'delete_request':
+        return <Trash2 size={18} />;
       default:
         return <Bell size={18} />;
     }
@@ -137,10 +177,15 @@ const NotificationsPanel = () => {
   };
 
   // Calcular próximos vencimientos (próximos 7 días)
-  const nextWeekPayments = upcomingPayments.filter(payment => {
-    const daysUntil = payment.daysUntil;
-    return daysUntil >= 0 && daysUntil <= 7;
-  });
+  const nextWeekPayments = upcomingPayments.map(payment => {
+    const paymentDate = new Date(payment.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    paymentDate.setHours(0, 0, 0, 0);
+    const diffTime = paymentDate - today;
+    const daysUntil = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return { ...payment, daysUntil };
+  }).filter(payment => payment.daysUntil >= 0 && payment.daysUntil <= 7);
 
   return (
     <div className={styles.container} ref={panelRef}>
@@ -250,6 +295,32 @@ const NotificationsPanel = () => {
                               disabled={respondingTo === notification.id}
                             >
                               {respondingTo === notification.id ? '...' : '✗ No pagó'}
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Botones de acción para aprobación de eliminación */}
+                        {notification.action_required && notification.action_type === 'delete_approval' && (
+                          <div className={styles.actionButtons}>
+                            <button
+                              className={`${styles.actionBtn} ${styles.confirm}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteApproval(notification, true);
+                              }}
+                              disabled={respondingTo === notification.id}
+                            >
+                              {respondingTo === notification.id ? '...' : '✓ Aprobar'}
+                            </button>
+                            <button
+                              className={`${styles.actionBtn} ${styles.reject}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteApproval(notification, false);
+                              }}
+                              disabled={respondingTo === notification.id}
+                            >
+                              {respondingTo === notification.id ? '...' : '✗ Rechazar'}
                             </button>
                           </div>
                         )}

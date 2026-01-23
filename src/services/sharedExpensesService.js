@@ -335,6 +335,7 @@ export const removeMember = async (memberId) => {
 
 /**
  * Obtener gastos de un grupo
+ * Por defecto solo muestra gastos aprobados, usa includeAll para ver todos
  */
 export const getGroupExpenses = async (groupId, filters = {}) => {
   try {
@@ -374,10 +375,24 @@ export const getGroupExpenses = async (groupId, filters = {}) => {
             profiles:user_id (first_name, last_name, avatar_url),
             virtual_friends:virtual_friend_id (name)
           )
+        ),
+        validations:shared_expense_validations (
+          id,
+          member_id,
+          user_id,
+          status,
+          responded_at,
+          rejection_reason
         )
       `)
       .eq('group_id', groupId)
       .order('expense_date', { ascending: false });
+
+    // Por defecto, solo mostrar gastos aprobados (a menos que se pida incluir todos)
+    if (!filters.includeAll) {
+      // Mostrar aprobados y pendientes (pero no rechazados)
+      query = query.in('validation_status', ['approved', 'pending']);
+    }
 
     // Filtros opcionales
     if (filters.category) {
@@ -391,6 +406,9 @@ export const getGroupExpenses = async (groupId, filters = {}) => {
     }
     if (filters.endDate) {
       query = query.lte('expense_date', filters.endDate);
+    }
+    if (filters.validationStatus) {
+      query = query.eq('validation_status', filters.validationStatus);
     }
 
     const { data, error } = await query;
@@ -409,7 +427,11 @@ export const getGroupExpenses = async (groupId, filters = {}) => {
         ...s,
         displayName: s.member?.display_name || 
           (s.member?.profiles ? `${s.member.profiles.first_name} ${s.member.profiles.last_name}` : s.member?.virtual_friends?.name)
-      }))
+      })),
+      // Agregar info de validación
+      isPending: expense.validation_status === 'pending',
+      isRejected: expense.validation_status === 'rejected',
+      pendingValidators: expense.validations?.filter(v => v.status === 'pending')?.length || 0
     }));
 
     return { expenses, error: null };
@@ -430,9 +452,29 @@ export const getGroupExpenses = async (groupId, filters = {}) => {
  * @param {string} expenseData.splitType - Tipo de división: 'equal', 'custom', 'percentage'
  * @param {Array} expenseData.payers - Array de { memberId, amount }
  * @param {Array} expenseData.splits - Array de { memberId, amount } (para custom) o se calcula automático
+ * @param {boolean} expenseData.skipValidation - Si es true, el gasto se aprueba automáticamente (para grupos de 1 persona)
  */
 export const createSharedExpense = async (userId, expenseData) => {
   try {
+    // Obtener miembros del grupo para determinar si necesita validación
+    const { data: groupMembers } = await supabase
+      .from('expense_group_members')
+      .select('id, user_id, virtual_friend_id, display_name')
+      .eq('group_id', expenseData.groupId)
+      .eq('is_active', true);
+
+    // Obtener participantes que deben validar (usuarios reales, excepto el creador)
+    const participantIds = expenseData.participantIds || groupMembers?.map(m => m.id) || [];
+    const participantMembers = groupMembers?.filter(m => participantIds.includes(m.id)) || [];
+    
+    // Usuarios reales que deben validar (no el creador, no amigos virtuales)
+    const validatorsNeeded = participantMembers.filter(m => 
+      m.user_id && m.user_id !== userId
+    );
+
+    // Determinar si necesita validación
+    const needsValidation = validatorsNeeded.length > 0 && !expenseData.skipValidation;
+
     // 1. Crear el gasto principal
     const { data: expense, error: expenseError } = await supabase
       .from('shared_expenses')
@@ -446,7 +488,8 @@ export const createSharedExpense = async (userId, expenseData) => {
         notes: expenseData.notes || null,
         currency: expenseData.currency || 'ARS',
         currency_symbol: expenseData.currencySymbol || '$',
-        created_by: userId
+        created_by: userId,
+        validation_status: needsValidation ? 'pending' : 'approved'
       })
       .select()
       .single();
@@ -488,15 +531,9 @@ export const createSharedExpense = async (userId, expenseData) => {
       }));
     } else {
       // Fallback: División equitativa entre todos los miembros activos
-      const { data: members } = await supabase
-        .from('expense_group_members')
-        .select('id')
-        .eq('group_id', expenseData.groupId)
-        .eq('is_active', true);
-
-      const splitAmount = expenseData.totalAmount / members.length;
+      const splitAmount = expenseData.totalAmount / groupMembers.length;
       
-      splitsToInsert = members.map(m => ({
+      splitsToInsert = groupMembers.map(m => ({
         expense_id: expense.id,
         member_id: m.id,
         amount_owed: Math.round(splitAmount * 100) / 100
@@ -509,10 +546,232 @@ export const createSharedExpense = async (userId, expenseData) => {
 
     if (splitsError) throw splitsError;
 
-    return { expense, error: null };
+    // 4. Si necesita validación, crear registros de validación y enviar notificaciones
+    if (needsValidation) {
+      const validationsToInsert = validatorsNeeded.map(m => ({
+        expense_id: expense.id,
+        member_id: m.id,
+        user_id: m.user_id,
+        status: 'pending'
+      }));
+
+      const { error: validationsError } = await supabase
+        .from('shared_expense_validations')
+        .insert(validationsToInsert);
+
+      if (validationsError) {
+        console.warn('Error creando validaciones (tabla puede no existir):', validationsError);
+      }
+
+      // Enviar notificaciones a los validadores
+      try {
+        const { createNotification } = await import('./notificationsService');
+        
+        // Obtener nombre del creador
+        const { data: creatorProfile } = await supabase
+          .from('profiles')
+          .select('first_name, last_name')
+          .eq('id', userId)
+          .single();
+        
+        const creatorName = creatorProfile 
+          ? `${creatorProfile.first_name || ''} ${creatorProfile.last_name || ''}`.trim() 
+          : 'Un usuario';
+
+        // Obtener nombre del grupo
+        const { data: groupData } = await supabase
+          .from('expense_groups')
+          .select('name')
+          .eq('id', expenseData.groupId)
+          .single();
+
+        for (const validator of validatorsNeeded) {
+          // Calcular la parte del validador
+          const validatorSplit = splitsToInsert.find(s => s.member_id === validator.id);
+          const validatorShare = validatorSplit?.amount_owed || (expenseData.totalAmount / participantMembers.length);
+
+          await createNotification({
+            userId: validator.user_id,
+            type: 'expense_validation',
+            title: '📋 Nuevo gasto por validar',
+            message: `${creatorName} registró un gasto compartido "${expenseData.description}" por ${expenseData.currencySymbol || '$'}${expenseData.totalAmount.toLocaleString('es-AR')} en el grupo "${groupData?.name || 'Grupo'}". Tu parte: ${expenseData.currencySymbol || '$'}${validatorShare.toLocaleString('es-AR')}. ¿Reconoces este gasto?`,
+            data: {
+              expense_id: expense.id,
+              expense_description: expenseData.description,
+              expense_amount: expenseData.totalAmount,
+              your_share: validatorShare,
+              group_id: expenseData.groupId,
+              group_name: groupData?.name,
+              creator_id: userId,
+              creator_name: creatorName,
+              currency_symbol: expenseData.currencySymbol || '$'
+            },
+            actionRequired: true,
+            actionType: 'expense_validation'
+          });
+        }
+      } catch (notifError) {
+        console.warn('Error enviando notificaciones de validación:', notifError);
+      }
+    }
+
+    return { 
+      expense, 
+      error: null,
+      needsValidation,
+      validatorsCount: validatorsNeeded.length
+    };
   } catch (error) {
     console.error('Error creando gasto compartido:', error);
     return { expense: null, error: error.message };
+  }
+};
+
+/**
+ * Aprobar un gasto compartido pendiente de validación
+ */
+export const approveSharedExpense = async (expenseId, userId) => {
+  try {
+    const { data, error } = await supabase
+      .rpc('approve_shared_expense', {
+        p_expense_id: expenseId,
+        p_user_id: userId
+      });
+
+    if (error) throw error;
+
+    // Si el gasto fue aprobado por todos, notificar al creador
+    if (data?.expense_approved && data?.creator_id) {
+      try {
+        const { createNotification } = await import('./notificationsService');
+        
+        // Obtener info del gasto
+        const { data: expense } = await supabase
+          .from('shared_expenses')
+          .select('description, total_amount, currency_symbol, group_id, expense_groups(name)')
+          .eq('id', expenseId)
+          .single();
+
+        await createNotification({
+          userId: data.creator_id,
+          type: 'expense_approved',
+          title: '✅ Gasto aprobado',
+          message: `Tu gasto "${expense?.description}" por ${expense?.currency_symbol || '$'}${expense?.total_amount?.toLocaleString('es-AR')} ha sido aprobado por todos los participantes y ahora está activo.`,
+          data: {
+            expense_id: expenseId,
+            group_name: expense?.expense_groups?.name
+          }
+        });
+      } catch (notifError) {
+        console.warn('Error notificando aprobación:', notifError);
+      }
+    }
+
+    return { 
+      success: data?.success, 
+      expenseApproved: data?.expense_approved,
+      pendingCount: data?.pending_count,
+      message: data?.message,
+      error: data?.success ? null : (data?.error || 'Error desconocido')
+    };
+  } catch (error) {
+    console.error('Error aprobando gasto:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Rechazar un gasto compartido pendiente de validación
+ */
+export const rejectSharedExpense = async (expenseId, userId, reason = null) => {
+  try {
+    const { data, error } = await supabase
+      .rpc('reject_shared_expense', {
+        p_expense_id: expenseId,
+        p_user_id: userId,
+        p_reason: reason
+      });
+
+    if (error) throw error;
+
+    // Notificar al creador sobre el rechazo
+    if (data?.expense_rejected && data?.creator_id) {
+      try {
+        const { createNotification } = await import('./notificationsService');
+        
+        // Obtener nombre de quien rechazó
+        const { data: rejecterProfile } = await supabase
+          .from('profiles')
+          .select('first_name, last_name')
+          .eq('id', userId)
+          .single();
+        
+        const rejecterName = rejecterProfile 
+          ? `${rejecterProfile.first_name || ''} ${rejecterProfile.last_name || ''}`.trim() 
+          : 'Un participante';
+
+        await createNotification({
+          userId: data.creator_id,
+          type: 'expense_rejected',
+          title: '❌ Gasto rechazado',
+          message: `${rejecterName} rechazó el gasto "${data.expense_description}".${reason ? ` Motivo: ${reason}` : ''} El gasto no será contabilizado.`,
+          data: {
+            expense_id: expenseId,
+            rejected_by: userId,
+            rejection_reason: reason
+          }
+        });
+      } catch (notifError) {
+        console.warn('Error notificando rechazo:', notifError);
+      }
+    }
+
+    return { 
+      success: data?.success, 
+      expenseRejected: data?.expense_rejected,
+      message: data?.message,
+      error: data?.success ? null : (data?.error || 'Error desconocido')
+    };
+  } catch (error) {
+    console.error('Error rechazando gasto:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Obtener gastos pendientes de validación para el usuario
+ */
+export const getPendingValidations = async (userId) => {
+  try {
+    const { data, error } = await supabase
+      .rpc('get_pending_expense_validations', { p_user_id: userId });
+
+    if (error) throw error;
+
+    return { validations: data || [], error: null };
+  } catch (error) {
+    console.error('Error obteniendo validaciones pendientes:', error);
+    return { validations: [], error: error.message };
+  }
+};
+
+/**
+ * Obtener cantidad de gastos pendientes de validación
+ */
+export const getPendingValidationsCount = async (userId) => {
+  try {
+    const { data, error } = await supabase
+      .from('shared_expense_validations')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('status', 'pending');
+
+    if (error) throw error;
+
+    return { count: data || 0, error: null };
+  } catch (error) {
+    console.error('Error contando validaciones pendientes:', error);
+    return { count: 0, error: error.message };
   }
 };
 
@@ -544,7 +803,97 @@ export const updateSharedExpense = async (expenseId, updates) => {
 };
 
 /**
- * Eliminar un gasto compartido
+ * Solicitar eliminación de un gasto compartido
+ * Envía notificación a todos los participantes para que aprueben la eliminación
+ */
+export const requestDeleteSharedExpense = async (expenseId, requesterId, requesterName) => {
+  try {
+    // Obtener el gasto con sus splits para saber quiénes participan
+    const { data: expense, error: expenseError } = await supabase
+      .from('shared_expenses')
+      .select(`
+        *,
+        splits:shared_expense_splits(
+          user_id
+        )
+      `)
+      .eq('id', expenseId)
+      .single();
+
+    if (expenseError) throw expenseError;
+
+    // Obtener todos los participantes únicos (excepto el solicitante)
+    const participantIds = [...new Set(expense.splits.map(s => s.user_id))]
+      .filter(id => id !== requesterId);
+
+    if (participantIds.length === 0) {
+      // Si no hay otros participantes, eliminar directamente
+      const { error } = await supabase
+        .from('shared_expenses')
+        .delete()
+        .eq('id', expenseId);
+
+      if (error) throw error;
+      return { error: null, needsApproval: false };
+    }
+
+    // Crear solicitud de eliminación pendiente
+    const { data: deleteRequest, error: requestError } = await supabase
+      .from('shared_expense_delete_requests')
+      .insert({
+        expense_id: expenseId,
+        requester_id: requesterId,
+        status: 'pending',
+        approvals_needed: participantIds.length,
+        approvals_received: 0
+      })
+      .select()
+      .single();
+
+    // Si la tabla no existe, crear las notificaciones directamente
+    if (requestError && requestError.code === '42P01') {
+      console.log('Tabla shared_expense_delete_requests no existe, enviando notificaciones...');
+    } else if (requestError) {
+      throw requestError;
+    }
+
+    // Importar servicio de notificaciones
+    const { createNotification } = await import('./notificationsService');
+
+    // Enviar notificación a cada participante
+    for (const participantId of participantIds) {
+      await createNotification({
+        userId: participantId,
+        type: 'delete_request',
+        title: '🗑️ Solicitud de eliminación',
+        message: `${requesterName} quiere eliminar el gasto compartido "${expense.description}" por ${expense.currency_symbol || '$'}${expense.amount.toLocaleString('es-AR')}. ¿Estás de acuerdo?`,
+        data: {
+          expense_id: expenseId,
+          expense_description: expense.description,
+          expense_amount: expense.amount,
+          requester_id: requesterId,
+          requester_name: requesterName,
+          delete_request_id: deleteRequest?.id || null
+        },
+        actionRequired: true,
+        actionType: 'delete_approval'
+      });
+    }
+
+    return { 
+      error: null, 
+      needsApproval: true,
+      requestId: deleteRequest?.id || null,
+      participantsNotified: participantIds.length
+    };
+  } catch (error) {
+    console.error('Error solicitando eliminación de gasto:', error);
+    return { error: error.message, needsApproval: false };
+  }
+};
+
+/**
+ * Eliminar un gasto compartido (directamente - solo usar cuando ya está aprobado)
  */
 export const deleteSharedExpense = async (expenseId) => {
   try {
@@ -713,11 +1062,22 @@ export const getExpenseDetails = async (expenseId) => {
 
 /**
  * Calcular deudas detalladas entre miembros del grupo
- * Analiza cada gasto para determinar quién debe a quién
+ * 
+ * Lógica: 
+ * - Cuando alguien paga un gasto, los demás participantes le deben su parte
+ * - El balance neto entre A y B se calcula así:
+ *   - Lo que B le debe a A (por los gastos que A pagó donde B participó)
+ *   - MENOS lo que A le debe a B (por los gastos que B pagó donde A participó)
+ * - Si el resultado es positivo, B le debe a A. Si es negativo, A le debe a B.
+ * 
+ * Ejemplo:
+ * - Yo pago $10 (compartido entre 2) -> Mi amiga me debe $5
+ * - Mi amiga paga $20 (compartido entre 2) -> Yo le debo $10
+ * - Balance neto: Ella me debe $5, yo le debo $10 -> Yo le debo $5 ($10 - $5)
  */
 export const calculateDetailedDebts = async (groupId) => {
   try {
-    // Obtener todos los gastos no saldados del grupo
+    // Obtener todos los gastos APROBADOS y no saldados del grupo
     const { data: expenses, error: expensesError } = await supabase
       .from('shared_expenses')
       .select(`
@@ -726,10 +1086,12 @@ export const calculateDetailedDebts = async (groupId) => {
         total_amount,
         expense_date,
         is_settled,
-        currency_symbol
+        currency_symbol,
+        validation_status
       `)
       .eq('group_id', groupId)
-      .eq('is_settled', false);
+      .eq('is_settled', false)
+      .eq('validation_status', 'approved'); // Solo gastos aprobados
 
     if (expensesError) throw expensesError;
 
@@ -763,13 +1125,14 @@ export const calculateDetailedDebts = async (groupId) => {
       };
     });
 
-    // Matriz de deudas: debts[deudor][acreedor] = monto
-    const debts = {};
+    // Matriz de deudas: owes[deudor][acreedor] = monto que deudor debe a acreedor
+    // Inicializar en 0
+    const owes = {};
     members.forEach(m => {
-      debts[m.id] = {};
+      owes[m.id] = {};
       members.forEach(other => {
         if (m.id !== other.id) {
-          debts[m.id][other.id] = 0;
+          owes[m.id][other.id] = 0;
         }
       });
     });
@@ -782,90 +1145,97 @@ export const calculateDetailedDebts = async (groupId) => {
         .select('member_id, amount_paid')
         .eq('expense_id', expense.id);
 
-      // Obtener splits de este gasto
+      // Obtener splits de este gasto (cuánto debe cada participante)
       const { data: splits } = await supabase
         .from('shared_expense_splits')
         .select('member_id, amount_owed, amount_paid, is_settled')
         .eq('expense_id', expense.id);
 
-      if (!payers || !splits) continue;
+      if (!payers || !splits || splits.length === 0) continue;
 
-      const totalAmount = parseFloat(expense.total_amount);
-      const numParticipants = splits.length;
-      const sharePerPerson = totalAmount / numParticipants;
+      // Crear mapa de pagos por miembro
+      const paymentsByMember = {};
+      payers.forEach(p => {
+        paymentsByMember[p.member_id] = parseFloat(p.amount_paid) || 0;
+      });
 
-      // Para cada split, calcular cuánto debe esa persona
-      for (const split of splits) {
-        if (split.is_settled) continue;
-        
-        const debtorId = split.member_id;
-        const amountOwed = parseFloat(split.amount_owed) || sharePerPerson;
-        const amountPaid = parseFloat(split.amount_paid) || 0;
-        const pendingAmount = amountOwed - amountPaid;
+      // Crear mapa de lo que debe cada miembro
+      const owedByMember = {};
+      splits.forEach(s => {
+        if (!s.is_settled) {
+          owedByMember[s.member_id] = parseFloat(s.amount_owed) || 0;
+        }
+      });
 
-        if (pendingAmount <= 0) continue;
+      // Para cada participante, calcular su balance en este gasto
+      // Balance = lo que pagó - lo que le correspondía
+      // Positivo = pagó de más (acreedor), Negativo = pagó de menos (deudor)
+      const balances = {};
+      for (const memberId of Object.keys(owedByMember)) {
+        const paid = paymentsByMember[memberId] || 0;
+        const owed = owedByMember[memberId] || 0;
+        balances[memberId] = paid - owed;
+      }
 
-        // Buscar cuánto pagó esta persona
-        const debtorPayment = payers.find(p => p.member_id === debtorId);
-        const debtorPaid = parseFloat(debtorPayment?.amount_paid) || 0;
+      // Separar acreedores (balance positivo) y deudores (balance negativo)
+      const creditors = Object.entries(balances)
+        .filter(([_, balance]) => balance > 0.01)
+        .map(([id, balance]) => ({ id, credit: balance }));
+      
+      const debtors = Object.entries(balances)
+        .filter(([_, balance]) => balance < -0.01)
+        .map(([id, balance]) => ({ id, debt: Math.abs(balance) }));
 
-        // Si pagó menos de lo que le corresponde, debe a los que pagaron más
-        const debtorNetDebt = amountOwed - debtorPaid;
-
-        if (debtorNetDebt > 0) {
-          // Distribuir la deuda entre los que pagaron de más
-          for (const payer of payers) {
-            if (payer.member_id === debtorId) continue;
+      // Distribuir las deudas: cada deudor debe a cada acreedor proporcionalmente
+      const totalCredit = creditors.reduce((sum, c) => sum + c.credit, 0);
+      
+      if (totalCredit > 0) {
+        for (const debtor of debtors) {
+          for (const creditor of creditors) {
+            // Proporción de este acreedor en el total de créditos
+            const proportion = creditor.credit / totalCredit;
+            // Lo que el deudor debe a este acreedor
+            const amountOwed = debtor.debt * proportion;
             
-            const creditorId = payer.member_id;
-            const creditorPaid = parseFloat(payer.amount_paid);
-            
-            // Lo que le correspondía pagar al acreedor
-            const creditorSplit = splits.find(s => s.member_id === creditorId);
-            const creditorOwed = parseFloat(creditorSplit?.amount_owed) || sharePerPerson;
-            const creditorExcess = creditorPaid - creditorOwed;
-
-            if (creditorExcess > 0 && debts[debtorId] && debts[debtorId][creditorId] !== undefined) {
-              // El deudor debe al acreedor proporcionalmente
-              const totalExcess = payers.reduce((sum, p) => {
-                const pSplit = splits.find(s => s.member_id === p.member_id);
-                const pOwed = parseFloat(pSplit?.amount_owed) || sharePerPerson;
-                const excess = parseFloat(p.amount_paid) - pOwed;
-                return sum + (excess > 0 ? excess : 0);
-              }, 0);
-
-              if (totalExcess > 0) {
-                const proportion = creditorExcess / totalExcess;
-                debts[debtorId][creditorId] += debtorNetDebt * proportion;
-              }
+            if (amountOwed > 0.01 && owes[debtor.id] && owes[debtor.id][creditor.id] !== undefined) {
+              owes[debtor.id][creditor.id] += amountOwed;
             }
           }
         }
       }
     }
 
-    // Simplificar deudas (A debe a B $10, B debe a A $3 -> A debe a B $7)
+    // Simplificar deudas: calcular balance neto entre cada par de personas
+    // Si A debe a B $10 y B debe a A $3 -> A debe a B $7 (neto)
     const simplifiedDebts = [];
     const processed = new Set();
 
-    for (const debtorId of Object.keys(debts)) {
-      for (const creditorId of Object.keys(debts[debtorId])) {
+    for (const debtorId of Object.keys(owes)) {
+      for (const creditorId of Object.keys(owes[debtorId])) {
+        // Evitar procesar el mismo par dos veces
         const key = [debtorId, creditorId].sort().join('-');
         if (processed.has(key)) continue;
         processed.add(key);
 
-        const debtAtoB = debts[debtorId][creditorId] || 0;
-        const debtBtoA = debts[creditorId]?.[debtorId] || 0;
+        // Deuda de A hacia B
+        const debtAtoB = owes[debtorId][creditorId] || 0;
+        // Deuda de B hacia A
+        const debtBtoA = owes[creditorId]?.[debtorId] || 0;
+        
+        // Balance neto: positivo significa que A debe a B
         const netDebt = Math.round((debtAtoB - debtBtoA) * 100) / 100;
 
+        // Solo agregar si hay una deuda significativa (> 1 centavo)
         if (Math.abs(netDebt) > 0.01) {
           if (netDebt > 0) {
+            // debtorId debe a creditorId
             simplifiedDebts.push({
               from: membersMap[debtorId],
               to: membersMap[creditorId],
               amount: netDebt
             });
           } else {
+            // creditorId debe a debtorId (deuda inversa)
             simplifiedDebts.push({
               from: membersMap[creditorId],
               to: membersMap[debtorId],
@@ -1497,7 +1867,13 @@ export default {
   createSharedExpense,
   updateSharedExpense,
   deleteSharedExpense,
+  requestDeleteSharedExpense,
   settleExpense,
+  // Validación de gastos
+  approveSharedExpense,
+  rejectSharedExpense,
+  getPendingValidations,
+  getPendingValidationsCount,
   // Liquidaciones
   getGroupBalances,
   calculateDetailedDebts,

@@ -3,8 +3,9 @@
  */
 import { useState, useRef } from 'react';
 import { useAuth, useFriends, useExpenses, useDebts, useUI } from '../../context';
-import { Button, Card, Input, Select, Loading } from '../../components';
+import { Button, Card, Input, Select, Loading, ImageCropper } from '../../components';
 import avatarService from '../../services/avatarService';
+import { Camera, Trash2, Copy, Loader2 } from 'lucide-react';
 import styles from './Profile.module.css';
 
 const Profile = () => {
@@ -62,31 +63,53 @@ const Profile = () => {
     showSuccess('Nickname copiado al portapapeles');
   };
 
-  // Manejo de avatar
+  // Manejo de avatar con cropper
+  const [showCropper, setShowCropper] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
   };
 
-  const handleAvatarChange = async (e) => {
+  const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
+    // Validar tipo
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      showError('Tipo de archivo no permitido. Usa JPG, PNG, GIF o WebP.');
+      e.target.value = '';
+      return;
+    }
+    
+    // Validar tamaño (máximo 5MB para antes del crop)
+    if (file.size > 5 * 1024 * 1024) {
+      showError('El archivo es muy grande. Máximo 5MB.');
+      e.target.value = '';
+      return;
+    }
+    
+    setSelectedFile(file);
+    setShowCropper(true);
+    e.target.value = '';
+  };
 
+  const handleCropComplete = async (croppedFile) => {
     setUploadingAvatar(true);
-    const result = await avatarService.uploadAvatar(user.id, file);
+    const result = await avatarService.uploadAvatar(user.id, croppedFile);
     setUploadingAvatar(false);
 
     if (result.error) {
       showError(result.error.message || 'Error al subir la foto');
     } else {
       showSuccess('Foto de perfil actualizada');
-      // Recargar perfil para obtener la nueva URL
       if (reloadProfile) {
         await reloadProfile();
       }
     }
     
-    // Limpiar input
-    e.target.value = '';
+    setSelectedFile(null);
   };
 
   const handleDeleteAvatar = async () => {
@@ -118,6 +141,17 @@ const Profile = () => {
 
   return (
     <div className={styles.profile}>
+      {/* Image Cropper Modal */}
+      <ImageCropper
+        isOpen={showCropper}
+        onClose={() => {
+          setShowCropper(false);
+          setSelectedFile(null);
+        }}
+        imageFile={selectedFile}
+        onCropComplete={handleCropComplete}
+        cropShape="round"
+      />
       {/* Header */}
       <div className={styles.header}>
         <h2 className={styles.title}>Mi Perfil</h2>
@@ -133,7 +167,7 @@ const Profile = () => {
               title="Cambiar foto de perfil"
             >
               {uploadingAvatar ? (
-                <span className={styles.avatarLoading}>⏳</span>
+                <span className={styles.avatarLoading}><Loader2 size={24} className={styles.spinIcon} /></span>
               ) : profile?.avatar_url ? (
                 <img 
                   src={profile.avatar_url} 
@@ -144,14 +178,14 @@ const Profile = () => {
                 <>{profile?.first_name?.[0]}{profile?.last_name?.[0]}</>
               )}
               <div className={styles.avatarOverlay}>
-                📷
+                <Camera size={24} />
               </div>
             </div>
             <input
               ref={fileInputRef}
               type="file"
               accept="image/jpeg,image/png,image/gif,image/webp"
-              onChange={handleAvatarChange}
+              onChange={handleFileSelect}
               className={styles.hiddenInput}
             />
             <div className={styles.avatarInfo}>
@@ -161,7 +195,7 @@ const Profile = () => {
               <div className={styles.nicknameRow}>
                 <span className={styles.nickname}>@{profile?.nickname}</span>
                 <button className={styles.copyBtn} onClick={copyNickname} title="Copiar nickname">
-                  📋
+                  <Copy size={16} />
                 </button>
               </div>
               <p className={styles.email}>{user?.email}</p>
@@ -171,7 +205,7 @@ const Profile = () => {
                   onClick={handleDeleteAvatar}
                   disabled={uploadingAvatar}
                 >
-                  🗑️ Quitar foto
+                  <Trash2 size={14} /> Quitar foto
                 </button>
               )}
             </div>

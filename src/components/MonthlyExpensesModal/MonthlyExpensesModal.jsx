@@ -2,7 +2,7 @@
  * Monthly Expenses Modal - Modal con detalles de gastos del mes
  */
 import { useMemo, useState } from 'react';
-import { Modal, Button, ExpenseEditModal } from '../';
+import { Modal, Button, ExpenseEditModal, Avatar } from '../';
 import styles from './MonthlyExpensesModal.module.css';
 
 const MonthlyExpensesModal = ({ isOpen, onClose, monthData, allExpenses, friends, virtualFriends, siteConfig }) => {
@@ -119,9 +119,11 @@ const MonthlyExpensesModal = ({ isOpen, onClose, monthData, allExpenses, friends
               {expensesByFriend.map((item) => (
                 <div key={item.friend.id} className={styles.friendCard}>
                   <div className={styles.friendHeader}>
-                    {item.friend.avatar_url && (
-                      <img src={item.friend.avatar_url} alt={item.friend.name} className={styles.friendAvatar} />
-                    )}
+                    <Avatar 
+                      src={item.friend.avatar_url}
+                      name={item.friend.name}
+                      size="sm"
+                    />
                     <div className={styles.friendInfo}>
                       <span className={styles.friendName}>{item.friend.name}</span>
                       <span className={styles.friendExpenseCount}>{item.expenses.length} gastos</span>

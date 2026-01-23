@@ -5,7 +5,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth, useExpenses, useDebts, useFriends, useUI } from '../../context';
-import { StatCard, Card, Button, Loading, EmptyState, Modal, Input, Select, CurrencyTabs, BankAccountsPanel, InstallmentsPanel, MonthSelectorModal, RequiredBankAccountModal, CURRENCIES } from '../../components';
+import { StatCard, Card, Button, Loading, EmptyState, Modal, Input, Select, BankAccountsPanel, InstallmentsPanel, MonthSelectorModal, RequiredBankAccountModal, Avatar, CURRENCIES } from '../../components';
 import remindersService from '../../services/remindersService';
 import monthlyIncomeService from '../../services/monthlyIncomeService';
 import {
@@ -329,13 +329,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Tabs de monedas */}
-      <CurrencyTabs
-        selectedCurrency={selectedCurrency}
-        onCurrencyChange={setSelectedCurrency}
-        availableCurrencies={availableCurrencies}
-      />
-
       {/* Panel de Cuentas Bancarias */}
       <BankAccountsPanel />
 
@@ -610,9 +603,11 @@ const Dashboard = () => {
                 {debtsByFriend.slice(0, 5).map((item) => (
                   <div key={item.friend.id} className={styles.friendDebtItem}>
                     <div className={styles.friendInfo}>
-                      <div className={styles.friendAvatar}>
-                        {item.friend.first_name?.[0]}{item.friend.last_name?.[0]}
-                      </div>
+                      <Avatar 
+                        src={item.friend.avatar_url}
+                        name={`${item.friend.first_name || ''} ${item.friend.last_name || ''}`}
+                        size="sm"
+                      />
                       <div>
                         <div className={styles.friendName}>
                           {item.friend.first_name} {item.friend.last_name}
@@ -641,9 +636,11 @@ const Dashboard = () => {
               <div className={styles.friendsList}>
                 {friends.slice(0, 4).map(({ friend }) => (
                   <div key={friend.id} className={styles.friendChip}>
-                    <div className={styles.friendAvatar}>
-                      {friend.first_name?.[0]}{friend.last_name?.[0]}
-                    </div>
+                    <Avatar 
+                      src={friend.avatar_url}
+                      name={`${friend.first_name || ''} ${friend.last_name || ''}`}
+                      size="xs"
+                    />
                     <span>@{friend.nickname}</span>
                   </div>
                 ))}

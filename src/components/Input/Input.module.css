@@ -50,6 +50,8 @@
   transform: translateY(-50%);
   color: var(--gray-400);
   font-size: 1rem;
+  display: flex;
+  align-items: center;
 }
 
 .error {
@@ -58,6 +60,11 @@
 
 .error:focus {
   box-shadow: 0 0 0 3px var(--error-100);
+}
+
+.hint {
+  font-size: 0.75rem;
+  color: var(--gray-500);
 }
 
 .errorText {

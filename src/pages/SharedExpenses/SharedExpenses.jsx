@@ -17,7 +17,7 @@ import {
   DollarSign, CreditCard, Home, Plane, Utensils,
   Car, Film, ShoppingBag, Zap, Heart, MoreHorizontal,
   AlertCircle, CheckCircle, MinusCircle, PlusCircle,
-  Tag, Calendar, FileText, ChevronRight, Bell
+  Tag, Calendar, FileText, ChevronRight, Bell, XCircle
 } from 'lucide-react';
 import './SharedExpenses.css';
 
@@ -248,7 +248,11 @@ const SharedExpenses = () => {
     });
 
     if (!result.error) {
-      showSuccess('Gasto registrado');
+      if (result.needsValidation) {
+        showSuccess(`Gasto registrado. Pendiente de validación por ${result.validatorsCount} participante(s).`);
+      } else {
+        showSuccess('Gasto registrado');
+      }
       loadGroupDetails(selectedGroup.id);
       setShowExpenseModal(false);
       setPendingExpenseData(null);
@@ -267,6 +271,15 @@ const SharedExpenses = () => {
     });
 
     if (!result.error) {
+      // Si requiere validación, mostrar mensaje especial
+      if (result.needsValidation) {
+        showSuccess(`Gasto registrado. Pendiente de validación por ${result.validatorsCount} participante(s).`);
+        loadGroupDetails(selectedGroup.id);
+        setShowBankConfirmModal(false);
+        setPendingExpenseData(null);
+        return;
+      }
+      
       if (linkToBank && bankAccountId) {
         // Calcular la parte REAL que le corresponde al usuario (no lo que pagó)
         const currentUserMember = selectedGroup.members.find(m => m.userId === user.id);
@@ -328,13 +341,19 @@ const SharedExpenses = () => {
   };
 
   const handleDeleteExpense = async (expenseId) => {
-    if (window.confirm('¿Eliminar este gasto?')) {
-      const result = await sharedExpensesService.deleteSharedExpense(expenseId);
+    if (window.confirm('¿Solicitar eliminación de este gasto? Se notificará a los demás participantes para su aprobación.')) {
+      const requesterName = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Un usuario';
+      const result = await sharedExpensesService.requestDeleteSharedExpense(expenseId, user.id, requesterName);
+      
       if (!result.error) {
-        showSuccess('Gasto eliminado');
-        loadGroupDetails(selectedGroup.id);
+        if (result.needsApproval) {
+          showSuccess(`Solicitud enviada. Se notificó a ${result.participantsNotified} participante(s) para que aprueben la eliminación.`);
+        } else {
+          showSuccess('Gasto eliminado');
+          loadGroupDetails(selectedGroup.id);
+        }
       } else {
-        showError('Error al eliminar el gasto');
+        showError('Error al solicitar eliminación: ' + result.error);
       }
     }
   };
@@ -352,6 +371,47 @@ const SharedExpenses = () => {
       showError('Error al cargar detalle del gasto');
     }
     setLoadingExpenseDetail(false);
+  };
+
+  // Handler para aprobar un gasto pendiente de validación
+  const handleApproveExpense = async (expense) => {
+    if (!window.confirm(`¿Confirmas que reconoces el gasto "${expense.description}" por ${expense.currency_symbol}${parseFloat(expense.total_amount).toLocaleString('es-AR')}?`)) {
+      return;
+    }
+
+    const result = await sharedExpensesService.approveSharedExpense(expense.id, user.id);
+    
+    if (result.success) {
+      if (result.expenseApproved) {
+        showSuccess('¡Gasto aprobado! El gasto ahora está activo y se incluirá en los cálculos.');
+      } else {
+        showSuccess(`Tu aprobación fue registrada. Faltan ${result.pendingCount} aprobación(es) más.`);
+      }
+      loadGroupDetails(selectedGroup.id);
+    } else {
+      showError('Error al aprobar el gasto: ' + result.error);
+    }
+  };
+
+  // Handler para rechazar un gasto pendiente de validación
+  const handleRejectExpense = async (expense) => {
+    const reason = window.prompt(`¿Por qué rechazas el gasto "${expense.description}"? (opcional)`);
+    
+    // Si el usuario cancela el prompt, no continuar
+    if (reason === null) return;
+    
+    if (!window.confirm(`¿Estás seguro de rechazar este gasto? El creador será notificado y el gasto no se contabilizará.`)) {
+      return;
+    }
+
+    const result = await sharedExpensesService.rejectSharedExpense(expense.id, user.id, reason || null);
+    
+    if (result.success) {
+      showSuccess('Gasto rechazado. El creador ha sido notificado.');
+      loadGroupDetails(selectedGroup.id);
+    } else {
+      showError('Error al rechazar el gasto: ' + result.error);
+    }
   };
 
   // Handler para finalizar/saldar un gasto
@@ -656,6 +716,8 @@ const SharedExpenses = () => {
           onAddMember={() => setShowMemberModal(true)}
           onDeleteExpense={handleDeleteExpense}
           onViewExpense={handleViewExpense}
+          onApproveExpense={handleApproveExpense}
+          onRejectExpense={handleRejectExpense}
           onRemoveMember={handleRemoveMember}
           onSettle={() => setShowSettlementModal(true)}
           onEditGroup={() => { setEditingGroup(selectedGroup); setShowGroupModal(true); }}
@@ -836,6 +898,8 @@ const GroupDetail = ({
   onAddMember,
   onDeleteExpense,
   onViewExpense,
+  onApproveExpense,
+  onRejectExpense,
   onRemoveMember,
   onSettle,
   onEditGroup,
@@ -963,6 +1027,9 @@ const GroupDetail = ({
             group={group}
             onDelete={onDeleteExpense}
             onView={onViewExpense}
+            onApprove={onApproveExpense}
+            onReject={onRejectExpense}
+            currentUserId={currentUserId}
           />
         )}
         {activeTab === 'balances' && (
@@ -991,7 +1058,7 @@ const GroupDetail = ({
 // ============================================
 // COMPONENTE: Lista de Gastos
 // ============================================
-const ExpensesList = ({ expenses, group, onDelete, onView }) => {
+const ExpensesList = ({ expenses, group, onDelete, onView, onApprove, onReject, currentUserId }) => {
   if (expenses.length === 0) {
     return (
       <div className="shared-empty-state">
@@ -1006,13 +1073,36 @@ const ExpensesList = ({ expenses, group, onDelete, onView }) => {
       {expenses.map(expense => {
         const CategoryIcon = CATEGORY_ICONS[expense.category?.toLowerCase()] || Tag;
         const payerNames = expense.payers?.map(p => p.displayName).join(', ') || 'Desconocido';
+        
+        // Verificar si este usuario necesita validar este gasto
+        const myValidation = expense.validations?.find(v => v.user_id === currentUserId);
+        const needsMyValidation = expense.isPending && myValidation?.status === 'pending';
+        const iCreatedIt = expense.created_by === currentUserId;
 
         return (
           <div 
             key={expense.id} 
-            className="shared-expense-item shared-expense-clickable"
+            className={`shared-expense-item shared-expense-clickable ${expense.isPending ? 'pending-validation' : ''} ${expense.isRejected ? 'rejected' : ''}`}
             onClick={() => onView(expense)}
           >
+            {/* Badge de estado de validación */}
+            {expense.isPending && (
+              <div className="validation-badge pending">
+                <Clock size={12} />
+                {iCreatedIt 
+                  ? `Esperando ${expense.pendingValidators} aprobación(es)` 
+                  : needsMyValidation 
+                    ? 'Requiere tu aprobación' 
+                    : 'Pendiente de validación'}
+              </div>
+            )}
+            {expense.isRejected && (
+              <div className="validation-badge rejected">
+                <XCircle size={12} />
+                Rechazado
+              </div>
+            )}
+
             <div className="shared-expense-icon">
               <CategoryIcon size={20} />
             </div>
@@ -1035,12 +1125,32 @@ const ExpensesList = ({ expenses, group, onDelete, onView }) => {
               <span className="shared-expense-total">
                 {expense.currency_symbol}{parseFloat(expense.total_amount).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
               </span>
-              <span className={`shared-expense-status ${expense.is_settled ? 'settled' : 'pending'}`}>
-                {expense.is_settled ? 'Saldado' : 'Pendiente'}
+              <span className={`shared-expense-status ${expense.is_settled ? 'settled' : expense.isPending ? 'validation-pending' : 'pending'}`}>
+                {expense.is_settled ? 'Saldado' : expense.isPending ? 'Por validar' : 'Pendiente'}
               </span>
             </div>
 
             <div className="shared-expense-actions">
+              {/* Botones de validación si necesita mi aprobación */}
+              {needsMyValidation && (
+                <>
+                  <button 
+                    className="shared-icon-btn shared-icon-btn-success"
+                    onClick={(e) => { e.stopPropagation(); onApprove(expense); }}
+                    title="Aprobar gasto"
+                  >
+                    <Check size={16} />
+                  </button>
+                  <button 
+                    className="shared-icon-btn shared-icon-btn-danger"
+                    onClick={(e) => { e.stopPropagation(); onReject(expense); }}
+                    title="Rechazar gasto"
+                  >
+                    <X size={16} />
+                  </button>
+                </>
+              )}
+              
               <button 
                 className="shared-icon-btn shared-icon-btn-view"
                 onClick={(e) => { e.stopPropagation(); onView(expense); }}
@@ -1048,13 +1158,16 @@ const ExpensesList = ({ expenses, group, onDelete, onView }) => {
               >
                 <FileText size={16} />
               </button>
-              <button 
-                className="shared-icon-btn shared-icon-btn-danger"
-                onClick={(e) => { e.stopPropagation(); onDelete(expense.id); }}
-                title="Eliminar"
-              >
-                <Trash2 size={16} />
-              </button>
+              {/* Solo mostrar delete si el gasto está aprobado o si yo lo creé */}
+              {(!expense.isPending || iCreatedIt) && (
+                <button 
+                  className="shared-icon-btn shared-icon-btn-danger"
+                  onClick={(e) => { e.stopPropagation(); onDelete(expense.id); }}
+                  title={expense.isPending && iCreatedIt ? "Cancelar gasto" : "Eliminar"}
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
             </div>
           </div>
         );
@@ -1835,11 +1948,29 @@ const ExpenseModal = ({ group, categories, onSave, onClose, onAddCategory }) => 
   // Función para actualizar el monto de un pagador con validación
   const updatePayerAmount = (memberId, amount) => {
     const cleanedAmount = handleMoneyInput(amount);
+    const numericAmount = parseFormattedNumber(cleanedAmount) || 0;
+    const totalAmount = parseFormattedNumber(formData.totalAmount) || 0;
     
-    setPayerAmounts(prev => ({
-      ...prev,
-      [memberId]: cleanedAmount
-    }));
+    // Calcular cuánto ya han pagado los otros participantes
+    const otherPayersTotal = Object.entries(payerAmounts)
+      .filter(([id, a]) => id !== memberId && a !== '' && a !== undefined && selectedParticipants[id])
+      .reduce((sum, [_, a]) => sum + (parseFormattedNumber(a) || 0), 0);
+    
+    // El máximo que puede ingresar este pagador
+    const maxAllowed = Math.max(0, totalAmount - otherPayersTotal);
+    
+    // Si el monto ingresado excede el máximo, limitar al máximo
+    if (numericAmount > maxAllowed && totalAmount > 0) {
+      setPayerAmounts(prev => ({
+        ...prev,
+        [memberId]: formatNumberWithThousands(maxAllowed)
+      }));
+    } else {
+      setPayerAmounts(prev => ({
+        ...prev,
+        [memberId]: cleanedAmount
+      }));
+    }
   };
 
   // Aplicar sugerencia al hacer click
@@ -1939,11 +2070,29 @@ const ExpenseModal = ({ group, categories, onSave, onClose, onAddCategory }) => 
   // Función para actualizar el monto personalizado de un split
   const updateCustomSplit = (memberId, amount) => {
     const cleanedAmount = handleMoneyInput(amount);
+    const numericAmount = parseFormattedNumber(cleanedAmount) || 0;
+    const totalAmount = parseFormattedNumber(formData.totalAmount) || 0;
     
-    setCustomSplits(prev => ({
-      ...prev,
-      [memberId]: cleanedAmount
-    }));
+    // Calcular cuánto ya se ha asignado a otros participantes
+    const otherSplitsTotal = Object.entries(customSplits)
+      .filter(([id, a]) => id !== memberId && a !== '' && a !== undefined && selectedParticipants[id])
+      .reduce((sum, [_, a]) => sum + (parseFormattedNumber(a) || 0), 0);
+    
+    // El máximo que puede asignarse a este participante
+    const maxAllowed = Math.max(0, totalAmount - otherSplitsTotal);
+    
+    // Si el monto ingresado excede el máximo, limitar al máximo
+    if (numericAmount > maxAllowed && totalAmount > 0) {
+      setCustomSplits(prev => ({
+        ...prev,
+        [memberId]: formatNumberWithThousands(maxAllowed)
+      }));
+    } else {
+      setCustomSplits(prev => ({
+        ...prev,
+        [memberId]: cleanedAmount
+      }));
+    }
   };
 
   // Aplicar sugerencia de split al hacer click
