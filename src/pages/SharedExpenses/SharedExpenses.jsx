@@ -2,13 +2,14 @@
  * SharedExpenses Page - Sistema de gastos compartidos estilo Splitwise
  * Mantiene el estilo visual del componente Friends
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth, useUI } from '../../context';
-import { Button, Modal, Loading, EmptyState } from '../../components';
+import { Button, Modal, Loading, EmptyState, ConfirmModal } from '../../components';
 import sharedExpensesService from '../../services/sharedExpensesService';
 import bankAccountsService from '../../services/bankAccountsService';
 import { createExpense, updateExpense, getExpenses } from '../../services/expensesService';
 import virtualFriendsService from '../../services/virtualFriendsService';
+import { supabase } from '../../services/supabase';
 import { useFriends } from '../../context';
 import { 
   Users, Plus, Wallet, TrendingUp, TrendingDown, 
@@ -59,6 +60,11 @@ const SharedExpenses = () => {
   const [expenseDetail, setExpenseDetail] = useState(null);
   const [loadingExpenseDetail, setLoadingExpenseDetail] = useState(false);
   
+  // Estados para modal de eliminación
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [expenseToDelete, setExpenseToDelete] = useState(null);
+  const [deletingExpense, setDeletingExpense] = useState(false);
+  
   // Estados para datos del grupo seleccionado
   const [groupExpenses, setGroupExpenses] = useState([]);
   const [groupBalances, setGroupBalances] = useState([]);
@@ -71,6 +77,9 @@ const SharedExpenses = () => {
   const [bankAccounts, setBankAccounts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [pendingExpenseData, setPendingExpenseData] = useState(null);
+  
+  // Ref para el canal de realtime
+  const realtimeChannelRef = useRef(null);
 
   // Cargar grupos al iniciar
   useEffect(() => {
@@ -81,6 +90,56 @@ const SharedExpenses = () => {
       loadCategories();
     }
   }, [user]);
+
+  // Suscripción a cambios en tiempo real de shared_expenses
+  useEffect(() => {
+    if (!selectedGroup?.id) return;
+
+    // Crear canal de realtime para el grupo seleccionado
+    const channelName = `shared_expenses_group_${selectedGroup.id}`;
+    
+    realtimeChannelRef.current = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'shared_expenses',
+          filter: `group_id=eq.${selectedGroup.id}`
+        },
+        (payload) => {
+          console.log('🔄 Cambio en shared_expenses:', payload.eventType);
+          
+          if (payload.eventType === 'DELETE') {
+            // Eliminar el gasto de la lista local inmediatamente
+            setGroupExpenses(prev => prev.filter(exp => exp.id !== payload.old.id));
+            showSuccess('Un gasto compartido ha sido eliminado');
+            // También recargar balances
+            loadGroupDetails(selectedGroup.id);
+          } else if (payload.eventType === 'INSERT') {
+            // Recargar datos del grupo cuando se añade un gasto
+            loadGroupDetails(selectedGroup.id);
+          } else if (payload.eventType === 'UPDATE') {
+            // Recargar datos del grupo cuando se modifica
+            loadGroupDetails(selectedGroup.id);
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`✅ Realtime activo para grupo ${selectedGroup.name}`);
+        }
+      });
+
+    // Cleanup al desmontar o cambiar de grupo
+    return () => {
+      if (realtimeChannelRef.current) {
+        supabase.removeChannel(realtimeChannelRef.current);
+        realtimeChannelRef.current = null;
+      }
+    };
+  }, [selectedGroup?.id]);
 
   const loadGroups = async () => {
     setLoading(true);
@@ -341,21 +400,33 @@ const SharedExpenses = () => {
   };
 
   const handleDeleteExpense = async (expenseId) => {
-    if (window.confirm('¿Solicitar eliminación de este gasto? Se notificará a los demás participantes para su aprobación.')) {
-      const requesterName = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Un usuario';
-      const result = await sharedExpensesService.requestDeleteSharedExpense(expenseId, user.id, requesterName);
-      
-      if (!result.error) {
-        if (result.needsApproval) {
-          showSuccess(`Solicitud enviada. Se notificó a ${result.participantsNotified} participante(s) para que aprueben la eliminación.`);
-        } else {
-          showSuccess('Gasto eliminado');
-          loadGroupDetails(selectedGroup.id);
-        }
+    // Buscar el gasto para mostrar info en el modal
+    const expense = groupExpenses.find(e => e.id === expenseId);
+    setExpenseToDelete(expense || { id: expenseId });
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteExpense = async () => {
+    if (!expenseToDelete) return;
+    
+    setDeletingExpense(true);
+    const requesterName = `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || 'Un usuario';
+    const result = await sharedExpensesService.requestDeleteSharedExpense(expenseToDelete.id, user.id, requesterName);
+    
+    if (!result.error) {
+      if (result.needsApproval) {
+        showSuccess(`📤 Solicitud enviada. Se notificó a ${result.participantsNotified} participante(s) para que aprueben la eliminación.`);
       } else {
-        showError('Error al solicitar eliminación: ' + result.error);
+        showSuccess('✅ Gasto eliminado correctamente');
+        loadGroupDetails(selectedGroup.id);
       }
+    } else {
+      showError('Error al solicitar eliminación: ' + result.error);
     }
+    
+    setDeletingExpense(false);
+    setShowDeleteModal(false);
+    setExpenseToDelete(null);
   };
 
   // Handler para ver detalle del gasto
@@ -801,6 +872,36 @@ const SharedExpenses = () => {
           }}
         />
       )}
+
+      {/* Modal de confirmación de eliminación */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setExpenseToDelete(null);
+        }}
+        onConfirm={confirmDeleteExpense}
+        title="🗑️ Eliminar Gasto Compartido"
+        message={expenseToDelete ? 
+          `¿Solicitar la eliminación de "${expenseToDelete.description || 'este gasto'}"?` : 
+          '¿Solicitar eliminación de este gasto?'}
+        type="warning"
+        confirmText="Solicitar Eliminación"
+        cancelText="Cancelar"
+        loading={deletingExpense}
+      >
+        <div style={{ 
+          background: 'var(--bg-tertiary)', 
+          padding: 'var(--spacing-md)', 
+          borderRadius: 'var(--radius-md)',
+          marginTop: 'var(--spacing-sm)'
+        }}>
+          <p style={{ margin: 0, fontSize: 'var(--font-sm)', color: 'var(--text-secondary)' }}>
+            📤 Se enviará una notificación a todos los participantes del gasto para que aprueben la eliminación.
+            El gasto solo se eliminará cuando <strong>todos</strong> los participantes aprueben.
+          </p>
+        </div>
+      </ConfirmModal>
     </div>
   );
 };
@@ -1893,7 +1994,22 @@ const ExpenseModal = ({ group, categories, onSave, onClose, onAddCategory }) => 
   // Formatear número con separador de miles (1.000.000)
   const formatNumberWithThousands = (value) => {
     if (!value && value !== 0) return '';
-    const num = parseFloat(String(value).replace(/\./g, '').replace(',', '.'));
+    // Si ya es un número, usarlo directamente
+    // Si es string formateado en español (con punto de miles y coma decimal), parsearlo
+    let num;
+    if (typeof value === 'number') {
+      num = value;
+    } else {
+      // Solo reemplazar si parece ser formato español (tiene punto seguido de 3 dígitos = separador miles)
+      const strValue = String(value);
+      if (/\.\d{3}/.test(strValue)) {
+        // Formato español: 1.000,50 -> remover puntos de miles, coma a punto
+        num = parseFloat(strValue.replace(/\./g, '').replace(',', '.'));
+      } else {
+        // Formato normal o número simple: 1000.50 o 0.5
+        num = parseFloat(strValue.replace(',', '.'));
+      }
+    }
     if (isNaN(num)) return '';
     return num.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   };
@@ -1971,6 +2087,54 @@ const ExpenseModal = ({ group, categories, onSave, onClose, onAddCategory }) => 
         [memberId]: cleanedAmount
       }));
     }
+  };
+
+  // Función para aplicar monto rápido y auto-distribuir el restante
+  const applyQuickAmount = (memberId, amount) => {
+    const totalAmount = parseFormattedNumber(formData.totalAmount) || 0;
+    const activeMembers = getActiveParticipants();
+    const remaining = Math.max(0, Math.round((totalAmount - amount) * 100) / 100);
+    
+    // Si este usuario paga todo (100%), limpiar los demás
+    if (amount >= totalAmount) {
+      const newAmounts = {};
+      activeMembers.forEach(m => {
+        if (m.id === memberId) {
+          newAmounts[m.id] = formatNumberWithThousands(totalAmount);
+        } else {
+          newAmounts[m.id] = '';
+        }
+      });
+      setPayerAmounts(newAmounts);
+      return;
+    }
+    
+    // Actualizar el monto de este usuario
+    setPayerAmounts(prev => {
+      const newAmounts = { ...prev, [memberId]: formatNumberWithThousands(amount) };
+      
+      // Si solo hay 2 participantes, auto-llenar al otro
+      const othersWithoutAmount = activeMembers.filter(m => {
+        if (m.id === memberId) return false;
+        const currentAmount = m.id === memberId ? amount : parseFormattedNumber(prev[m.id]) || 0;
+        return currentAmount === 0;
+      });
+      
+      if (othersWithoutAmount.length === 1 && remaining > 0) {
+        newAmounts[othersWithoutAmount[0].id] = formatNumberWithThousands(remaining);
+      }
+      
+      return newAmounts;
+    });
+  };
+
+  // Calcular el monto disponible para los botones rápidos
+  const getAvailableForQuickAmount = (memberId) => {
+    const totalAmount = parseFormattedNumber(formData.totalAmount) || 0;
+    const otherPayersTotal = Object.entries(payerAmounts)
+      .filter(([id, a]) => id !== memberId && a !== '' && a !== undefined && selectedParticipants[id])
+      .reduce((sum, [_, a]) => sum + (parseFormattedNumber(a) || 0), 0);
+    return Math.max(0, totalAmount - otherPayersTotal);
   };
 
   // Aplicar sugerencia al hacer click
@@ -2370,6 +2534,74 @@ const ExpenseModal = ({ group, categories, onSave, onClose, onAddCategory }) => 
                             placeholder={showSuggestion ? formatNumberWithThousands(suggestedAmount) : '0'}
                           />
                         </div>
+                        {/* Botones de monto rápido */}
+                        {totalAmount > 0 && (() => {
+                          const availableAmount = getAvailableForQuickAmount(member.id);
+                          const hasAvailable = availableAmount > 0;
+                          const halfTotal = Math.round(totalAmount * 0.5 * 100) / 100;
+                          const equalPart = Math.round(totalAmount / participantsCount * 100) / 100;
+                          
+                          // No mostrar botones si ya no hay monto disponible (otro pagó todo)
+                          if (!hasAmount && !hasAvailable) return null;
+                          
+                          return (
+                            <div className="shared-quick-amount-btns">
+                              {hasAvailable && availableAmount >= totalAmount && (
+                                <button
+                                  type="button"
+                                  className="shared-quick-btn"
+                                  onClick={() => applyQuickAmount(member.id, totalAmount)}
+                                  title="Pagar todo"
+                                >
+                                  {group.currency_symbol}{formatNumberWithThousands(totalAmount)}
+                                </button>
+                              )}
+                              {hasAvailable && halfTotal <= availableAmount && halfTotal < totalAmount && (
+                                <button
+                                  type="button"
+                                  className="shared-quick-btn"
+                                  onClick={() => applyQuickAmount(member.id, halfTotal)}
+                                  title="Mitad del total"
+                                >
+                                  {group.currency_symbol}{formatNumberWithThousands(halfTotal)}
+                                </button>
+                              )}
+                              {hasAvailable && equalPart <= availableAmount && equalPart < halfTotal && participantsCount > 2 && (
+                                <button
+                                  type="button"
+                                  className="shared-quick-btn"
+                                  onClick={() => applyQuickAmount(member.id, equalPart)}
+                                  title="Parte equitativa"
+                                >
+                                  {group.currency_symbol}{formatNumberWithThousands(equalPart)}
+                                </button>
+                              )}
+                              {hasAvailable && !hasAmount && availableAmount < totalAmount && availableAmount > 0 && (
+                                <button
+                                  type="button"
+                                  className="shared-quick-btn shared-quick-btn-remaining"
+                                  onClick={() => applyQuickAmount(member.id, availableAmount)}
+                                  title="Monto restante"
+                                >
+                                  {group.currency_symbol}{formatNumberWithThousands(availableAmount)}
+                                </button>
+                              )}
+                              {hasAmount && (
+                                <button
+                                  type="button"
+                                  className="shared-quick-btn shared-quick-btn-clear"
+                                  onClick={() => setPayerAmounts(prev => ({
+                                    ...prev,
+                                    [member.id]: ''
+                                  }))}
+                                  title="Limpiar"
+                                >
+                                  ✕
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()}
                         {showSuggestion && (
                           <button
                             type="button"
@@ -2453,11 +2685,11 @@ const ExpenseModal = ({ group, categories, onSave, onClose, onAddCategory }) => 
               <div className="shared-split-preview">
                 <div className="shared-split-preview-header">
                   <span>División equitativa entre {participantsCount} participantes:</span>
-                  <strong>{group.currency_symbol}{sharePerPerson.toFixed(2)} c/u</strong>
+                  <strong>{group.currency_symbol}{formatNumberWithThousands(sharePerPerson)} c/u</strong>
                 </div>
                 <div className="shared-split-preview-list">
                   {activeParticipants.map(member => {
-                    const memberPaid = parseFloat(payerAmounts[member.id]) || 0;
+                    const memberPaid = parseFormattedNumber(payerAmounts[member.id]) || 0;
                     const balance = Math.round((memberPaid - sharePerPerson) * 100) / 100;
                     
                     return (

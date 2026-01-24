@@ -107,6 +107,67 @@
 }
 
 /* ==========================================
+   MODERN SCROLLBAR STYLES
+   ========================================== */
+/* Webkit browsers (Chrome, Safari, Edge) */
+.shared-page ::-webkit-scrollbar,
+.shared-modal ::-webkit-scrollbar,
+.shared-expenses-list ::-webkit-scrollbar,
+.shared-balances-list ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.shared-page ::-webkit-scrollbar-track,
+.shared-modal ::-webkit-scrollbar-track,
+.shared-expenses-list ::-webkit-scrollbar-track,
+.shared-balances-list ::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+.shared-page ::-webkit-scrollbar-thumb,
+.shared-modal ::-webkit-scrollbar-thumb,
+.shared-expenses-list ::-webkit-scrollbar-thumb,
+.shared-balances-list ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #c4b5fd 0%, #a78bfa 50%, #8b5cf6 100%);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.shared-page ::-webkit-scrollbar-thumb:hover,
+.shared-modal ::-webkit-scrollbar-thumb:hover,
+.shared-expenses-list ::-webkit-scrollbar-thumb:hover,
+.shared-balances-list ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #a78bfa 0%, #8b5cf6 50%, #7c3aed 100%);
+  background-clip: padding-box;
+}
+
+.shared-page ::-webkit-scrollbar-thumb:active,
+.shared-modal ::-webkit-scrollbar-thumb:active,
+.shared-expenses-list ::-webkit-scrollbar-thumb:active,
+.shared-balances-list ::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%);
+  background-clip: padding-box;
+}
+
+/* Firefox */
+.shared-page,
+.shared-modal,
+.shared-expenses-list,
+.shared-balances-list {
+  scrollbar-width: thin;
+  scrollbar-color: #a78bfa transparent;
+}
+
+/* Scrollbar corner */
+.shared-page ::-webkit-scrollbar-corner,
+.shared-modal ::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ==========================================
    MAIN CONTAINER
    ========================================== */
 .shared-page {
@@ -370,6 +431,7 @@
   color: var(--shared-text-tertiary);
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -587,96 +649,193 @@
 .shared-btn-primary {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--shared-spacing-sm);
-  padding: var(--shared-spacing-md) var(--shared-spacing-lg);
-  background: var(--shared-gradient-primary);
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
   color: white;
   border: none;
-  border-radius: var(--shared-radius-md);
+  border-radius: 12px;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all var(--shared-transition-normal);
-  box-shadow: var(--shared-shadow-sm);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.shared-btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.shared-btn-primary:hover::before {
+  left: 100%;
 }
 
 .shared-btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shared-shadow-md);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+}
+
+.shared-btn-primary:active {
+  transform: translateY(0);
 }
 
 .shared-btn-secondary {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--shared-spacing-sm);
-  padding: var(--shared-spacing-md) var(--shared-spacing-lg);
-  background: var(--shared-bg-secondary);
-  color: var(--shared-text-secondary);
-  border: 1px solid var(--shared-border-color);
-  border-radius: var(--shared-radius-md);
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all var(--shared-transition-normal);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.shared-btn-secondary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  transition: left 0.5s ease;
+}
+
+.shared-btn-secondary:hover::before {
+  left: 100%;
 }
 
 .shared-btn-secondary:hover {
-  background: var(--shared-border-color);
-  border-color: var(--shared-text-muted);
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .shared-btn-success {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--shared-spacing-sm);
-  padding: var(--shared-spacing-md) var(--shared-spacing-lg);
-  background: var(--shared-gradient-success);
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
   color: white;
   border: none;
-  border-radius: var(--shared-radius-md);
+  border-radius: 12px;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all var(--shared-transition-normal);
-  box-shadow: var(--shared-shadow-sm);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.shared-btn-success::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.shared-btn-success:hover::before {
+  left: 100%;
 }
 
 .shared-btn-success:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shared-shadow-md);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+}
+
+.shared-btn-success:active {
+  transform: translateY(0);
 }
 
 .shared-btn-cancel {
-  padding: var(--shared-spacing-md) var(--shared-spacing-lg);
-  background: transparent;
-  color: var(--shared-text-secondary);
-  border: 1px solid var(--shared-border-color);
-  border-radius: var(--shared-radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all var(--shared-transition-fast);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .shared-btn-cancel:hover {
-  background: var(--shared-bg-secondary);
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 /* Botón Danger */
 .shared-btn-danger {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--shared-spacing-sm);
-  padding: var(--shared-spacing-md) var(--shared-spacing-lg);
-  background: linear-gradient(135deg, var(--shared-danger) 0%, var(--shared-danger-dark) 100%);
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%);
   color: white;
   border: none;
-  border-radius: var(--shared-radius-md);
+  border-radius: 12px;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all var(--shared-transition-normal);
-  box-shadow: var(--shared-shadow-sm);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.shared-btn-danger::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.shared-btn-danger:hover::before {
+  left: 100%;
+}
+
+.shared-btn-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
+}
+
+.shared-btn-danger:active {
+  transform: translateY(0);
 }
 
 .shared-btn-danger:hover {
@@ -1158,8 +1317,29 @@
   max-width: 480px;
   max-height: 90vh;
   overflow-y: auto;
+  overflow-x: hidden;
   box-shadow: var(--shared-shadow-xl);
   animation: shared-scale-in 0.3s ease;
+  position: relative;
+}
+
+/* Scrollbar dentro del modal */
+.shared-modal::-webkit-scrollbar {
+  width: 6px;
+}
+
+.shared-modal::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 8px 0;
+}
+
+.shared-modal::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #c4b5fd 0%, #a78bfa 100%);
+  border-radius: 10px;
+}
+
+.shared-modal::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #a78bfa 0%, #8b5cf6 100%);
 }
 
 .shared-modal-lg {
@@ -1214,9 +1394,129 @@
   display: flex;
   gap: var(--shared-spacing-md);
   justify-content: flex-end;
-  padding-top: var(--shared-spacing-md);
+  padding-top: var(--shared-spacing-lg);
   border-top: 1px solid var(--shared-border-light);
   margin-top: var(--shared-spacing-md);
+}
+
+/* ==========================================
+   MODERN GRADIENT BUTTONS FOR MODAL ACTIONS
+   ========================================== */
+.shared-modal-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.shared-modal-actions button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.shared-modal-actions button:hover::before {
+  left: 100%;
+}
+
+/* Primary Action Button - Gradient Blue/Purple */
+.shared-modal-actions button[type="submit"],
+.shared-modal-actions .shared-btn-primary,
+.shared-modal-actions button:last-child:not(.shared-btn-secondary):not(.shared-btn-cancel):not(.shared-btn-danger) {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+}
+
+.shared-modal-actions button[type="submit"]:hover,
+.shared-modal-actions .shared-btn-primary:hover,
+.shared-modal-actions button:last-child:not(.shared-btn-secondary):not(.shared-btn-cancel):not(.shared-btn-danger):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+}
+
+.shared-modal-actions button[type="submit"]:active,
+.shared-modal-actions .shared-btn-primary:active {
+  transform: translateY(0);
+}
+
+/* Secondary/Cancel Button - Soft Gray Gradient */
+.shared-modal-actions .shared-btn-secondary,
+.shared-modal-actions .shared-btn-cancel,
+.shared-modal-actions button[type="button"]:not(.shared-btn-primary):not(.shared-btn-danger):not(.shared-btn-success) {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.shared-modal-actions .shared-btn-secondary:hover,
+.shared-modal-actions .shared-btn-cancel:hover,
+.shared-modal-actions button[type="button"]:not(.shared-btn-primary):not(.shared-btn-danger):not(.shared-btn-success):hover {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Success Button - Green Gradient */
+.shared-modal-actions .shared-btn-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+}
+
+.shared-modal-actions .shared-btn-success:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+}
+
+/* Danger Button - Red Gradient */
+.shared-modal-actions .shared-btn-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+}
+
+.shared-modal-actions .shared-btn-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
+}
+
+/* Icon in buttons */
+.shared-modal-actions button svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.2s ease;
+}
+
+.shared-modal-actions button:hover svg {
+  transform: scale(1.1);
+}
+
+/* Disabled state */
+.shared-modal-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.shared-modal-actions button:disabled::before {
+  display: none;
 }
 
 /* Form Elements */
@@ -2384,6 +2684,66 @@
 .shared-suggestion-btn.small {
   padding: 4px 8px;
   font-size: 0.7rem;
+}
+
+/* Botones de porcentaje rápido */
+.shared-quick-amount-btns {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.shared-quick-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #6366f1;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.shared-quick-btn:hover {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.18) 0%, rgba(139, 92, 246, 0.15) 100%);
+  border-color: rgba(99, 102, 241, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+}
+
+.shared-quick-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.shared-quick-btn-clear {
+  color: #dc2626;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(220, 38, 38, 0.08) 100%);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.shared-quick-btn-clear:hover {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.18) 0%, rgba(220, 38, 38, 0.15) 100%);
+  border-color: rgba(239, 68, 68, 0.4);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
+}
+
+.shared-quick-btn-remaining {
+  color: #059669;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.08) 100%);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.shared-quick-btn-remaining:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(5, 150, 105, 0.15) 100%);
+  border-color: rgba(16, 185, 129, 0.4);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
 }
 
 .shared-payer-balance {

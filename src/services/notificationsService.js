@@ -249,6 +249,24 @@ export const deleteNotification = async (notificationId) => {
 };
 
 /**
+ * Eliminar todas las notificaciones del usuario
+ */
+export const deleteAllNotifications = async (userId) => {
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('user_id', userId);
+
+    if (error) throw error;
+    return { error: null };
+  } catch (error) {
+    console.error('Error eliminando todas las notificaciones:', error);
+    return { error };
+  }
+};
+
+/**
  * Suscribirse a notificaciones en tiempo real
  * Retorna una función para cancelar la suscripción
  */
@@ -400,6 +418,7 @@ export default {
   markAsRead,
   markAllAsRead,
   deleteNotification,
+  deleteAllNotifications,
   subscribeToNotifications,
   playNotificationSound,
   createPaymentConfirmation,

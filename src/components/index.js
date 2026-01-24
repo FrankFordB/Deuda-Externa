@@ -7,6 +7,7 @@ export { default as NumberInput, formatNumberWithDots, parseFormattedNumber } fr
 export { default as Select } from './Select';
 export { default as Card } from './Card';
 export { default as Modal } from './Modal';
+export { default as ConfirmModal } from './ConfirmModal';
 export { default as StatCard } from './StatCard';
 export { default as Notifications } from './Notifications';
 export { default as Loading } from './Loading';
@@ -31,3 +32,5 @@ export { default as RecurringExpenseForm } from './RecurringExpenseForm';
 export { default as RecurringExpensesPanel } from './RecurringExpensesPanel';
 export { default as Avatar } from './Avatar';
 export { default as ImageCropper } from './ImageCropper';
+export { default as ActionRequestsPanel } from './ActionRequestsPanel';
+

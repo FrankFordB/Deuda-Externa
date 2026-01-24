@@ -29,7 +29,10 @@ import {
   AlertTriangle,
   Zap,
   Trash2,
-  Coins
+  Coins,
+  Users,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import styles from './AccountDetail.module.css';
 
@@ -49,10 +52,12 @@ const AccountDetail = () => {
   const [expenses, setExpenses] = useState([]);
   const [debts, setDebts] = useState([]);
   const [debtsOwed, setDebtsOwed] = useState([]);
+  const [sharedExpenses, setSharedExpenses] = useState([]);
+  const [expandedGroups, setExpandedGroups] = useState({});
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [activeTab, setActiveTab] = useState('expenses'); // 'expenses' | 'debts' | 'owed'
+  const [activeTab, setActiveTab] = useState('expenses'); // 'expenses' | 'debts' | 'owed' | 'shared'
   
   // Modales de confirmación
   const [showMarkPaidModal, setShowMarkPaidModal] = useState(false);
@@ -69,6 +74,14 @@ const AccountDetail = () => {
   const currentDate = new Date();
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
+
+  // Toggle para expandir/colapsar grupo de gastos compartidos
+  const toggleGroupExpanded = (groupId) => {
+    setExpandedGroups(prev => ({
+      ...prev,
+      [groupId]: !prev[groupId]
+    }));
+  };
 
   const loadAccountData = useCallback(async () => {
     setLoading(true);
@@ -117,6 +130,16 @@ const AccountDetail = () => {
       .order('created_at', { ascending: false });
     
     setDebtsOwed(debtsOwedData || []);
+
+    // Cargar gastos compartidos en esta moneda
+    const { getUserSharedExpenses } = await import('../../services/sharedExpensesService');
+    const { expenses: sharedData } = await getUserSharedExpenses(
+      user.id,
+      accountData.currency,
+      selectedYear,
+      selectedMonth
+    );
+    setSharedExpenses(sharedData || []);
 
     // Cargar estadísticas
     const { stats: statsData } = await bankAccountsService.getAccountStats(
@@ -443,6 +466,12 @@ const AccountDetail = () => {
           >
             <Coins size={16} /> Me Deben ({debtsOwed.filter(d => d.status !== 'paid' && d.status !== 'rejected').length})
           </button>
+          <button
+            className={`${styles.tab} ${activeTab === 'shared' ? styles.active : ''}`}
+            onClick={() => setActiveTab('shared')}
+          >
+            <Users size={16} /> Gastos Compartidos ({sharedExpenses.length})
+          </button>
         </div>
 
         {/* Contenido de Gastos Personales */}
@@ -618,6 +647,99 @@ const AccountDetail = () => {
                     </div>
                   );
                 })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Contenido de Gastos Compartidos */}
+        {activeTab === 'shared' && (
+          <div className={styles.tabContent}>
+            {sharedExpenses.length === 0 ? (
+              <EmptyState
+                icon={<Users size={48} />}
+                title="Sin gastos compartidos"
+                description="No tienes gastos compartidos asociados a esta cuenta"
+              />
+            ) : (
+              <div className={styles.sharedExpensesList}>
+                {sharedExpenses.map(group => (
+                  <div key={group.groupId} className={styles.sharedGroup}>
+                    <div 
+                      className={styles.sharedGroupHeader}
+                      onClick={() => toggleGroupExpanded(group.groupId)}
+                    >
+                      <div className={styles.sharedGroupLeft}>
+                        {expandedGroups[group.groupId] ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                        <Users size={20} className={styles.groupIcon} />
+                        <div>
+                          <div className={styles.sharedGroupTitle}>
+                            Gastos compartidos - {group.groupName}
+                          </div>
+                          <div className={styles.sharedGroupMeta}>
+                            {group.expenses.length} gasto{group.expenses.length !== 1 ? 's' : ''}
+                          </div>
+                        </div>
+                      </div>
+                      <div className={styles.sharedGroupRight}>
+                        {group.totalOwed > 0 && (
+                          <div className={styles.sharedGroupOwed}>
+                            <span className={styles.label}>Debes:</span>
+                            <span className={styles.owedAmount}>
+                              {group.currencySymbol}{group.totalOwed.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        )}
+                        {group.totalPaid > 0 && (
+                          <div className={styles.sharedGroupPaid}>
+                            <span className={styles.label}>Pagaste:</span>
+                            <span className={styles.paidAmount}>
+                              {group.currencySymbol}{group.totalPaid.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {expandedGroups[group.groupId] && (
+                      <div className={styles.sharedGroupExpenses}>
+                        {group.expenses.map(expense => (
+                          <div key={expense.id} className={styles.sharedExpenseItem}>
+                            <div className={styles.itemLeft}>
+                              <span className={styles.itemIcon}>
+                                {expense.category || <Package size={18} />}
+                              </span>
+                              <div>
+                                <div className={styles.itemTitle}>{expense.description}</div>
+                                <div className={styles.itemMeta}>
+                                  <Calendar size={12} /> {formatDate(expense.date)}
+                                  {expense.creatorName && ` • Pagado por ${expense.creatorName}`}
+                                </div>
+                              </div>
+                            </div>
+                            <div className={styles.itemRight}>
+                              <div className={styles.sharedAmounts}>
+                                <div className={styles.totalAmount}>
+                                  Total: {group.currencySymbol}{expense.totalAmount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                                </div>
+                                {expense.userAmount > 0 && !expense.isPaidByUser && (
+                                  <div className={styles.userOwes}>
+                                    Debes: {group.currencySymbol}{expense.userAmount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                                  </div>
+                                )}
+                                {expense.isPaidByUser && (
+                                  <div className={styles.userPaid}>
+                                    <CheckCircle size={14} /> Tú pagaste
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </div>

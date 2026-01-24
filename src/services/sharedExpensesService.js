@@ -682,9 +682,25 @@ export const approveSharedExpense = async (expenseId, userId) => {
 
 /**
  * Rechazar un gasto compartido pendiente de validación
+ * El gasto se elimina automáticamente y se notifica al creador
  */
 export const rejectSharedExpense = async (expenseId, userId, reason = null) => {
   try {
+    // Primero obtener info del gasto antes de rechazarlo
+    const { data: expenseInfo } = await supabase
+      .from('shared_expenses')
+      .select(`
+        id,
+        description,
+        total_amount,
+        currency_symbol,
+        created_by,
+        group_id,
+        expense_groups (name)
+      `)
+      .eq('id', expenseId)
+      .single();
+
     const { data, error } = await supabase
       .rpc('reject_shared_expense', {
         p_expense_id: expenseId,
@@ -702,33 +718,48 @@ export const rejectSharedExpense = async (expenseId, userId, reason = null) => {
         // Obtener nombre de quien rechazó
         const { data: rejecterProfile } = await supabase
           .from('profiles')
-          .select('first_name, last_name')
+          .select('first_name, last_name, nickname')
           .eq('id', userId)
           .single();
         
         const rejecterName = rejecterProfile 
-          ? `${rejecterProfile.first_name || ''} ${rejecterProfile.last_name || ''}`.trim() 
+          ? (rejecterProfile.nickname || `${rejecterProfile.first_name || ''} ${rejecterProfile.last_name || ''}`.trim())
           : 'Un participante';
 
         await createNotification({
           userId: data.creator_id,
           type: 'expense_rejected',
-          title: '❌ Gasto rechazado',
-          message: `${rejecterName} rechazó el gasto "${data.expense_description}".${reason ? ` Motivo: ${reason}` : ''} El gasto no será contabilizado.`,
+          title: '❌ Gasto no reconocido',
+          message: `${rejecterName} no reconoce el gasto "${data.expense_description || expenseInfo?.description}"${reason ? ` - Motivo: ${reason}` : ''}. El gasto será eliminado automáticamente. Si crees que es un error, contacta directamente con ${rejecterName}.`,
           data: {
             expense_id: expenseId,
             rejected_by: userId,
-            rejection_reason: reason
+            rejected_by_name: rejecterName,
+            rejection_reason: reason,
+            group_name: expenseInfo?.expense_groups?.name
           }
         });
       } catch (notifError) {
         console.warn('Error notificando rechazo:', notifError);
+      }
+
+      // Eliminar el gasto automáticamente después de rechazarlo
+      try {
+        await supabase
+          .from('shared_expenses')
+          .delete()
+          .eq('id', expenseId);
+        
+        console.log('Gasto rechazado eliminado automáticamente:', expenseId);
+      } catch (deleteError) {
+        console.warn('Error eliminando gasto rechazado:', deleteError);
       }
     }
 
     return { 
       success: data?.success, 
       expenseRejected: data?.expense_rejected,
+      expenseDeleted: true,
       message: data?.message,
       error: data?.success ? null : (data?.error || 'Error desconocido')
     };
@@ -804,87 +835,83 @@ export const updateSharedExpense = async (expenseId, updates) => {
 
 /**
  * Solicitar eliminación de un gasto compartido
- * Envía notificación a todos los participantes para que aprueben la eliminación
+ * Usa el sistema de validación para requerir aprobación de todos los participantes
  */
-export const requestDeleteSharedExpense = async (expenseId, requesterId, requesterName) => {
+export const requestDeleteSharedExpense = async (expenseId, requesterId, requesterName, reason = null) => {
   try {
-    // Obtener el gasto con sus splits para saber quiénes participan
-    const { data: expense, error: expenseError } = await supabase
+    // Usar la función RPC del sistema de validación
+    const { data, error } = await supabase.rpc('request_expense_deletion', {
+      p_expense_id: expenseId,
+      p_user_id: requesterId,
+      p_reason: reason
+    });
+
+    if (error) throw error;
+
+    // Si no tuvo éxito, retornar el error
+    if (!data?.success) {
+      return { 
+        error: data?.error || 'Error desconocido', 
+        needsApproval: false 
+      };
+    }
+
+    // Si fue auto-aprobado (no hay otros participantes), ya se eliminó
+    if (data.auto_approved) {
+      return { 
+        error: null, 
+        needsApproval: false,
+        message: data.message
+      };
+    }
+
+    // Si necesita aprobación, enviar notificaciones a los participantes
+    // Obtener info del gasto para las notificaciones
+    const { data: expense } = await supabase
       .from('shared_expenses')
-      .select(`
-        *,
-        splits:shared_expense_splits(
-          user_id
-        )
-      `)
+      .select('description, total_amount, currency_symbol, group_id')
       .eq('id', expenseId)
       .single();
 
-    if (expenseError) throw expenseError;
+    if (expense) {
+      // Obtener los miembros del grupo (excepto el solicitante)
+      const { data: members } = await supabase
+        .from('expense_group_members')
+        .select('user_id')
+        .eq('group_id', expense.group_id)
+        .not('user_id', 'is', null)
+        .neq('user_id', requesterId);
 
-    // Obtener todos los participantes únicos (excepto el solicitante)
-    const participantIds = [...new Set(expense.splits.map(s => s.user_id))]
-      .filter(id => id !== requesterId);
+      if (members && members.length > 0) {
+        const { createNotification } = await import('./notificationsService');
 
-    if (participantIds.length === 0) {
-      // Si no hay otros participantes, eliminar directamente
-      const { error } = await supabase
-        .from('shared_expenses')
-        .delete()
-        .eq('id', expenseId);
-
-      if (error) throw error;
-      return { error: null, needsApproval: false };
-    }
-
-    // Crear solicitud de eliminación pendiente
-    const { data: deleteRequest, error: requestError } = await supabase
-      .from('shared_expense_delete_requests')
-      .insert({
-        expense_id: expenseId,
-        requester_id: requesterId,
-        status: 'pending',
-        approvals_needed: participantIds.length,
-        approvals_received: 0
-      })
-      .select()
-      .single();
-
-    // Si la tabla no existe, crear las notificaciones directamente
-    if (requestError && requestError.code === '42P01') {
-      console.log('Tabla shared_expense_delete_requests no existe, enviando notificaciones...');
-    } else if (requestError) {
-      throw requestError;
-    }
-
-    // Importar servicio de notificaciones
-    const { createNotification } = await import('./notificationsService');
-
-    // Enviar notificación a cada participante
-    for (const participantId of participantIds) {
-      await createNotification({
-        userId: participantId,
-        type: 'delete_request',
-        title: '🗑️ Solicitud de eliminación',
-        message: `${requesterName} quiere eliminar el gasto compartido "${expense.description}" por ${expense.currency_symbol || '$'}${expense.amount.toLocaleString('es-AR')}. ¿Estás de acuerdo?`,
-        data: {
-          expense_id: expenseId,
-          expense_description: expense.description,
-          expense_amount: expense.amount,
-          requester_id: requesterId,
-          requester_name: requesterName,
-          delete_request_id: deleteRequest?.id || null
-        },
-        actionRequired: true,
-        actionType: 'delete_approval'
-      });
+        for (const member of members) {
+          await createNotification({
+            userId: member.user_id,
+            type: 'delete_request',
+            title: '🗑️ Solicitud de eliminación',
+            message: `${requesterName} quiere eliminar el gasto compartido "${expense.description}" por ${expense.currency_symbol || '$'}${expense.total_amount.toLocaleString('es-AR')}. ¿Estás de acuerdo?`,
+            data: {
+              expense_id: expenseId,
+              expense_description: expense.description,
+              expense_amount: expense.total_amount,
+              requester_id: requesterId,
+              requester_name: requesterName,
+              action_id: data.action_id
+            },
+            actionRequired: true,
+            actionType: 'delete_approval'
+          });
+        }
+      }
     }
 
     return { 
       error: null, 
       needsApproval: true,
-      requestId: deleteRequest?.id || null,
-      participantsNotified: participantIds.length
+      requestId: data.action_id,
+      participantsNotified: data.pending_count,
+      message: data.message
     };
   } catch (error) {
     console.error('Error solicitando eliminación de gasto:', error);
@@ -1850,6 +1877,143 @@ export const resignExpenseDebt = async (expenseId, creditorUserId, bankAccountId
   }
 };
 
+/**
+ * Obtener gastos compartidos donde el usuario participa
+ * Para mostrar en la vista del banco
+ * @param {string} userId - ID del usuario
+ * @param {string} currency - Moneda (opcional)
+ * @param {number} year - Año (opcional)
+ * @param {number} month - Mes (opcional)
+ */
+export const getUserSharedExpenses = async (userId, currency = null, year = null, month = null) => {
+  try {
+    // Primero obtener los member_ids del usuario en todos los grupos
+    const { data: memberIds, error: memberError } = await supabase
+      .from('expense_group_members')
+      .select('id, group_id, expense_groups!inner(name, currency)')
+      .eq('user_id', userId)
+      .eq('is_active', true);
+
+    if (memberError) throw memberError;
+
+    if (!memberIds || memberIds.length === 0) {
+      return { expenses: [], error: null };
+    }
+
+    // Filtrar por moneda si se especifica
+    let filteredMemberIds = memberIds;
+    if (currency) {
+      filteredMemberIds = memberIds.filter(m => m.expense_groups?.currency === currency);
+    }
+
+    const memberIdList = filteredMemberIds.map(m => m.id);
+
+    if (memberIdList.length === 0) {
+      return { expenses: [], error: null };
+    }
+
+    // Obtener gastos donde el usuario tiene un split
+    let query = supabase
+      .from('shared_expense_splits')
+      .select(`
+        id,
+        amount_owed,
+        amount_paid,
+        is_settled,
+        expense:expense_id (
+          id,
+          description,
+          total_amount,
+          category,
+          expense_date,
+          currency,
+          currency_symbol,
+          is_settled,
+          validation_status,
+          created_by,
+          group_id,
+          creator:created_by (
+            id,
+            first_name,
+            last_name,
+            nickname
+          ),
+          expense_group:group_id (
+            id,
+            name
+          )
+        )
+      `)
+      .in('member_id', memberIdList)
+      .eq('expense.validation_status', 'approved');
+
+    // Filtrar por año y mes si se especifican
+    if (year && month) {
+      const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+      const endDate = new Date(year, month, 0).toISOString().split('T')[0]; // Último día del mes
+      query = query
+        .gte('expense.expense_date', startDate)
+        .lte('expense.expense_date', endDate);
+    }
+
+    const { data, error } = await query.order('expense(expense_date)', { ascending: false });
+
+    if (error) throw error;
+
+    // Formatear los datos y agrupar por grupo
+    const expensesByGroup = {};
+    
+    (data || []).forEach(split => {
+      if (!split.expense) return;
+      
+      const groupId = split.expense.group_id;
+      const groupName = split.expense.expense_group?.name || 'Grupo';
+      
+      if (!expensesByGroup[groupId]) {
+        expensesByGroup[groupId] = {
+          groupId,
+          groupName,
+          currency: split.expense.currency,
+          currencySymbol: split.expense.currency_symbol,
+          expenses: [],
+          totalOwed: 0,
+          totalPaid: 0
+        };
+      }
+      
+      const expenseItem = {
+        splitId: split.id,
+        expenseId: split.expense.id,
+        description: split.expense.description,
+        totalAmount: parseFloat(split.expense.total_amount),
+        amountOwed: parseFloat(split.amount_owed),
+        amountPaid: parseFloat(split.amount_paid || 0),
+        category: split.expense.category,
+        expenseDate: split.expense.expense_date,
+        isSettled: split.is_settled,
+        currency: split.expense.currency,
+        currencySymbol: split.expense.currency_symbol,
+        creatorName: split.expense.creator 
+          ? `${split.expense.creator.first_name} ${split.expense.creator.last_name}`.trim() 
+          : 'Usuario',
+        isMyExpense: split.expense.created_by === userId
+      };
+      
+      expensesByGroup[groupId].expenses.push(expenseItem);
+      expensesByGroup[groupId].totalOwed += expenseItem.amountOwed;
+      expensesByGroup[groupId].totalPaid += expenseItem.amountPaid;
+    });
+
+    return { 
+      expenses: Object.values(expensesByGroup),
+      error: null 
+    };
+  } catch (error) {
+    console.error('Error obteniendo gastos compartidos del usuario:', error);
+    return { expenses: [], error: error.message };
+  }
+};
+
 export default {
   // Grupos
   getUserGroups,
@@ -1889,6 +2053,8 @@ export default {
   rejectPaymentRequest,
   getGroupPaymentHistory,
   resignExpenseDebt,
+  // Gastos del usuario para el banco
+  getUserSharedExpenses,
   // Categorías
   getUserCategories,
   createCategory,

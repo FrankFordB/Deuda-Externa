@@ -3,7 +3,7 @@
  */
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth, useNotifications, useUI } from '../../context';
-import { Card, Button, Loading } from '../../components';
+import { Card, Button, Loading, ConfirmModal } from '../../components';
 import remindersService from '../../services/remindersService';
 import { 
   Calendar, 
@@ -26,13 +26,30 @@ import styles from './DueDates.module.css';
 
 const DueDates = () => {
   const { user } = useAuth();
-  const { notifications, markAsRead, deleteNotification } = useNotifications();
+  const { notifications, markAsRead, deleteNotification, deleteAllNotifications } = useNotifications();
   const { siteConfig, showSuccess } = useUI();
   
   const [loading, setLoading] = useState(false);
   const [upcomingDueDates, setUpcomingDueDates] = useState(null);
+  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'dueDates' | 'notifications'
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
 
   const currency = siteConfig?.currency || '$';
+
+  // Handler para eliminar todas las notificaciones
+  const handleDeleteAllNotifications = async () => {
+    setDeletingAll(true);
+    try {
+      await deleteAllNotifications();
+      showSuccess('Notificaciones eliminadas');
+      setShowDeleteAllModal(false);
+    } catch (error) {
+      console.error('Error deleting notifications:', error);
+    } finally {
+      setDeletingAll(false);
+    }
+  };
 
   // Cargar vencimientos próximos
   useEffect(() => {
@@ -160,14 +177,20 @@ const DueDates = () => {
           </p>
         </div>
         <div className={styles.headerStats}>
-          <div className={`${styles.statBadge} ${styles.dueDates}`}>
+          <button 
+            className={`${styles.statBadge} ${styles.dueDates} ${activeTab === 'dueDates' ? styles.active : ''}`}
+            onClick={() => setActiveTab(activeTab === 'dueDates' ? 'all' : 'dueDates')}
+          >
             <Clock size={18} />
             <span>{totalDueDates} vencimientos</span>
-          </div>
-          <div className={`${styles.statBadge} ${styles.notifications}`}>
+          </button>
+          <button 
+            className={`${styles.statBadge} ${styles.notifications} ${activeTab === 'notifications' ? styles.active : ''}`}
+            onClick={() => setActiveTab(activeTab === 'notifications' ? 'all' : 'notifications')}
+          >
             <Bell size={18} />
             <span>{totalNotifications} notificaciones</span>
-          </div>
+          </button>
         </div>
       </div>
 
@@ -176,8 +199,9 @@ const DueDates = () => {
           <Loading size="lg" text="Cargando datos..." />
         </div>
       ) : (
-        <div className={styles.content}>
+        <div className={`${styles.content} ${activeTab !== 'all' ? styles.singleColumn : ''}`}>
           {/* Próximos Vencimientos */}
+          {(activeTab === 'all' || activeTab === 'dueDates') && (
           <div className={styles.sectionColumn}>
             <Card className={styles.sectionCard}>
               <div className={styles.sectionHeader}>
@@ -301,8 +325,10 @@ const DueDates = () => {
               )}
             </Card>
           </div>
+          )}
 
           {/* Notificaciones */}
+          {(activeTab === 'all' || activeTab === 'notifications') && (
           <div className={styles.sectionColumn}>
             <Card className={styles.sectionCard}>
               <div className={styles.sectionHeader}>
@@ -310,17 +336,43 @@ const DueDates = () => {
                   <Bell size={20} className={styles.sectionIcon} />
                   Notificaciones
                 </h3>
-                {totalNotifications > 0 && (
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    onClick={handleMarkAllRead}
-                    icon={<Check size={16} />}
-                  >
-                    Marcar todas leídas
-                  </Button>
-                )}
+                <div className={styles.sectionActions}>
+                  {totalNotifications > 0 && (
+                    <>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={handleMarkAllRead}
+                        icon={<Check size={16} />}
+                      >
+                        Marcar leídas
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={() => setShowDeleteAllModal(true)}
+                        icon={<Trash2 size={16} />}
+                        className={styles.deleteAllBtn}
+                      >
+                        Borrar todas
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
+
+              {/* Modal de confirmación para eliminar todas */}
+              <ConfirmModal
+                isOpen={showDeleteAllModal}
+                onConfirm={handleDeleteAllNotifications}
+                onCancel={() => setShowDeleteAllModal(false)}
+                title="Eliminar notificaciones"
+                message="¿Estás seguro de que deseas eliminar todas las notificaciones? Esta acción no se puede deshacer."
+                confirmText="Eliminar todas"
+                cancelText="Cancelar"
+                type="danger"
+                loading={deletingAll}
+              />
 
               {totalNotifications > 0 ? (
                 <div className={styles.notificationsList}>
@@ -481,9 +533,10 @@ const DueDates = () => {
               )}
             </Card>
           </div>
+          )}
 
           {/* Empty State General */}
-          {totalNotifications === 0 && totalDueDates === 0 && (
+          {totalNotifications === 0 && totalDueDates === 0 && activeTab === 'all' && (
             <Card className={styles.allClearCard}>
               <div className={styles.allClear}>
                 <CheckCircle size={64} className={styles.allClearIcon} />

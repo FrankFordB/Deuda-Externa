@@ -176,6 +176,16 @@ export const NotificationsProvider = ({ children }) => {
     return result;
   };
 
+  const deleteAllNotifications = async () => {
+    if (!user) return { error: 'No user authenticated' };
+    const result = await notificationsService.deleteAllNotifications(user.id);
+    if (!result.error) {
+      setNotifications([]);
+      setUnreadCount(0);
+    }
+    return result;
+  };
+
   const requestPaymentConfirmation = async (debtId, confirmerId, debtData = {}) => {
     if (!user) return { error: 'No user authenticated' };
     
@@ -216,6 +226,7 @@ export const NotificationsProvider = ({ children }) => {
     markAsRead,
     markAllAsRead,
     deleteNotification,
+    deleteAllNotifications,
     requestPaymentConfirmation,
     respondPaymentConfirmation,
     refreshNotifications: () => { loadingRef.current = false; loadNotifications(user?.id); }

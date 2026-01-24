@@ -5,7 +5,8 @@ import { useState, useRef, useEffect } from 'react';
 import { useNotifications, useExpenses, useDebts, useAuth, useUI } from '../../context';
 import { markInstallmentAsPaid } from '../../services/debtsService';
 import sharedExpensesService from '../../services/sharedExpensesService';
-import { Coins, Banknote, CheckCircle, Users, CreditCard, Undo2, Bell, Clock, AlertTriangle, Calendar, Trash2 } from 'lucide-react';
+import ConfirmModal from '../ConfirmModal';
+import { Coins, Banknote, CheckCircle, Users, CreditCard, Undo2, Bell, BellRing, Clock, AlertTriangle, Calendar, Trash2 } from 'lucide-react';
 import styles from './NotificationsPanel.module.css';
 
 const NotificationsPanel = () => {
@@ -15,6 +16,7 @@ const NotificationsPanel = () => {
     markAsRead, 
     markAllAsRead, 
     deleteNotification,
+    deleteAllNotifications,
     respondPaymentConfirmation,
     loading 
   } = useNotifications();
@@ -31,8 +33,24 @@ const NotificationsPanel = () => {
   const [activeTab, setActiveTab] = useState('notifications'); // 'notifications' | 'upcoming'
   const [respondingTo, setRespondingTo] = useState(null);
   const [hasPlayedSound, setHasPlayedSound] = useState(false);
+  const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
+  const [deletingAll, setDeletingAll] = useState(false);
   const panelRef = useRef(null);
   const audioRef = useRef(null);
+
+  // Handler para eliminar todas las notificaciones
+  const handleDeleteAll = async () => {
+    setDeletingAll(true);
+    try {
+      await deleteAllNotifications();
+      showSuccess('Notificaciones eliminadas');
+      setShowDeleteAllModal(false);
+    } catch (error) {
+      showError('Error al eliminar notificaciones');
+    } finally {
+      setDeletingAll(false);
+    }
+  };
 
   // Reproducir sonido cuando hay notificaciones nuevas
   useEffect(() => {
@@ -60,9 +78,12 @@ const NotificationsPanel = () => {
     }
   };
 
-  // Cerrar panel al hacer click fuera
+  // Cerrar panel al hacer click fuera (pero no si el modal está abierto)
   useEffect(() => {
     const handleClickOutside = (event) => {
+      // No cerrar si el modal de confirmación está abierto
+      if (showDeleteAllModal) return;
+      
       if (panelRef.current && !panelRef.current.contains(event.target)) {
         setIsOpen(false);
       }
@@ -70,7 +91,7 @@ const NotificationsPanel = () => {
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [showDeleteAllModal]);
 
   const handleNotificationClick = async (notification) => {
     if (!notification.read) {
@@ -132,6 +153,44 @@ const NotificationsPanel = () => {
     }
   };
 
+  // Handler para validar gastos compartidos (aprobar/rechazar)
+  const handleExpenseValidation = async (notification, approved) => {
+    setRespondingTo(notification.id);
+    
+    try {
+      if (approved) {
+        // Aprobar el gasto
+        const result = await sharedExpensesService.approveSharedExpense(
+          notification.data.expense_id, 
+          user.id
+        );
+        if (!result.error) {
+          showSuccess('Has aprobado el gasto compartido');
+        } else {
+          showError('Error al aprobar el gasto: ' + result.error);
+        }
+      } else {
+        // Rechazar el gasto - se eliminará automáticamente
+        const result = await sharedExpensesService.rejectSharedExpense(
+          notification.data.expense_id, 
+          user.id,
+          'No reconozco este gasto'
+        );
+        if (!result.error) {
+          showSuccess('El gasto fue rechazado y eliminado. Se notificó al creador para que se comunique contigo.');
+        } else {
+          showError('Error al rechazar el gasto: ' + result.error);
+        }
+      }
+      await deleteNotification(notification.id);
+    } catch (error) {
+      console.error('Error procesando validación:', error);
+      showError('Error al procesar la validación');
+    } finally {
+      setRespondingTo(null);
+    }
+  };
+
   const getNotificationIcon = (type) => {
     switch (type) {
       case 'payment_confirmation':
@@ -160,6 +219,8 @@ const NotificationsPanel = () => {
         return <Calendar size={18} />;
       case 'delete_request':
         return <Trash2 size={18} />;
+      case 'expense_validation':
+        return <Users size={18} />;
       default:
         return <Bell size={18} />;
     }
@@ -190,11 +251,17 @@ const NotificationsPanel = () => {
   return (
     <div className={styles.container} ref={panelRef}>
       <button 
-        className={styles.bellButton}
+        className={`${styles.bellButton} ${unreadCount > 0 ? styles.hasUnread : ''}`}
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Notificaciones"
       >
-        <span className={styles.bellIcon}>🔔</span>
+        <span className={styles.bellIcon}>
+          {unreadCount > 0 ? (
+            <BellRing size={22} className={styles.bellRinging} />
+          ) : (
+            <Bell size={22} />
+          )}
+        </span>
         {unreadCount > 0 && (
           <>
             <span className={styles.badge}>
@@ -213,7 +280,7 @@ const NotificationsPanel = () => {
               className={`${styles.tab} ${activeTab === 'notifications' ? styles.tabActive : ''}`}
               onClick={() => setActiveTab('notifications')}
             >
-              <span>🔔</span>
+              <Bell size={16} />
               Notificaciones
               {unreadCount > 0 && (
                 <span className={styles.tabBadge}>{unreadCount}</span>
@@ -236,14 +303,25 @@ const NotificationsPanel = () => {
             <>
               <div className={styles.header}>
                 <h3>Notificaciones</h3>
-                {unreadCount > 0 && (
-                  <button 
-                    className={styles.markAllRead}
-                    onClick={markAllAsRead}
-                  >
-                    Marcar todo como leído
-                  </button>
-                )}
+                <div className={styles.headerActions}>
+                  {unreadCount > 0 && (
+                    <button 
+                      className={styles.markAllRead}
+                      onClick={markAllAsRead}
+                    >
+                      Marcar leídas
+                    </button>
+                  )}
+                  {notifications.length > 0 && (
+                    <button 
+                      className={styles.deleteAllBtn}
+                      onClick={() => setShowDeleteAllModal(true)}
+                      title="Eliminar todas"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className={styles.notificationsList}>
@@ -324,6 +402,32 @@ const NotificationsPanel = () => {
                             </button>
                           </div>
                         )}
+
+                        {/* Botones de acción para validación de gastos compartidos */}
+                        {notification.action_required && notification.action_type === 'expense_validation' && (
+                          <div className={styles.actionButtons}>
+                            <button
+                              className={`${styles.actionBtn} ${styles.confirm}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleExpenseValidation(notification, true);
+                              }}
+                              disabled={respondingTo === notification.id}
+                            >
+                              {respondingTo === notification.id ? '...' : '✓ Confirmar gasto'}
+                            </button>
+                            <button
+                              className={`${styles.actionBtn} ${styles.reject}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleExpenseValidation(notification, false);
+                              }}
+                              disabled={respondingTo === notification.id}
+                            >
+                              {respondingTo === notification.id ? '...' : '✗ No reconozco'}
+                            </button>
+                          </div>
+                        )}
                       </div>
 
                       {!notification.read && <div className={styles.unreadDot}></div>}
@@ -380,6 +484,19 @@ const NotificationsPanel = () => {
           )}
         </div>
       )}
+
+      {/* Modal de confirmación para eliminar todas - FUERA del panel */}
+      <ConfirmModal
+        isOpen={showDeleteAllModal}
+        onConfirm={handleDeleteAll}
+        onCancel={() => setShowDeleteAllModal(false)}
+        title="Eliminar notificaciones"
+        message="¿Estás seguro de que deseas eliminar todas las notificaciones? Esta acción no se puede deshacer."
+        confirmText="Eliminar todas"
+        cancelText="Cancelar"
+        type="danger"
+        loading={deletingAll}
+      />
     </div>
   );
 };
